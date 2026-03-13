@@ -1,0 +1,362 @@
+// B-School Course Bidding Platform — Prisma Schema
+// Provider: SQLite (dev) / PostgreSQL (prod via env swap)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+// SQLite doesn't support native enums; we use String with comments
+
+// UserRole: ADMIN | PROFESSOR | STUDENT
+// Programme: BM | HRM | BOTH
+// BiddingRoundStatus: DRAFT | OPEN | CLOSED | CONFIRMED
+// CourseStatus: DRAFT | PUBLISHED | BIDDING_OPEN | BIDDING_CLOSED | CONFIRMED | CANCELLED
+// AllocationStatus: TENTATIVE | CONFIRMED | WITHDRAWN | WAITLISTED
+// TieBreakMethod: CQPI_DESC | GRADE_DESC | COMPOSITE_RANK | LOTTERY | MANUAL_RANK
+// BidStatus: ACTIVE | WINNING | LOSING | REIMBURSED | WITHDRAWN
+// AuditAction: see constants in lib/constants.ts
+// NotificationType: ROUND_OPENED | ROUND_CLOSED | ALLOCATION_RESULT | CONFIRMATION_REQUIRED | COURSE_CANCELLED | ANNOUNCEMENT | SYSTEM
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         String    // UserRole
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  studentProfile    StudentProfile?
+  professorProfile  ProfessorProfile?
+  bids              Bid[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  sentNotifications Notification[]  @relation("SentBy")
+}
+
+model StudentProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rollNumber    String   @unique
+  programme     String   // BM | HRM
+  batchId       String
+  batch         Batch    @relation(fields: [batchId], references: [id])
+  cqpi          Float    @default(0.0)
+  enrolledYear  Int
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pointAccounts   PointAccount[]
+  allocations     AllocationResult[]
+  waitlistEntries WaitlistEntry[]
+  courseGrades    StudentCourseGrade[]
+}
+
+model ProfessorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId  String   @unique
+  department  String
+  designation String?
+  bio         String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  courseOfferings CourseOffering[]
+}
+
+model Batch {
+  id           String   @id @default(cuid())
+  name         String
+  programme    String   // BM | HRM | BOTH
+  academicYear String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  students   StudentProfile[]
+  quotaRules QuotaRule[]
+}
+
+model AcademicTerm {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  biddingCycles BiddingCycle[]
+}
+
+model BiddingCycle {
+  id                   String   @id @default(cuid())
+  termId               String
+  term                 AcademicTerm @relation(fields: [termId], references: [id])
+  name                 String
+  totalBidPoints       Int      @default(1000)
+  carryForwardEnabled  Boolean  @default(false)
+  minBidRequired       Boolean  @default(true)
+  crossProgEnabled     Boolean  @default(false)
+  isActive             Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  biddingRounds   BiddingRound[]
+  pointAccounts   PointAccount[]
+  courseOfferings CourseOffering[]
+  creditConstraints CreditConstraint[]
+}
+
+model BiddingRound {
+  id                  String   @id @default(cuid())
+  cycleId             String
+  cycle               BiddingCycle @relation(fields: [cycleId], references: [id])
+  roundNumber         Int
+  name                String
+  status              String   @default("DRAFT") // BiddingRoundStatus
+  opensAt             DateTime?
+  closesAt            DateTime?
+  isConfirmationRound Boolean  @default(false)
+  quotaRelaxed        Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  bids              Bid[]
+  allocationResults AllocationResult[]
+
+  @@unique([cycleId, roundNumber])
+}
+
+model PointAccount {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  cycleId          String
+  cycle            BiddingCycle   @relation(fields: [cycleId], references: [id])
+  totalPoints      Int
+  usedPoints       Int            @default(0)
+  reservedPoints   Int            @default(0)
+
+  @@unique([studentProfileId, cycleId])
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  title         String
+  credits       Int
+  description   String?
+  prerequisites String?
+  learningGoals String?
+  scheduleNotes String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  offerings CourseOffering[]
+}
+
+model CourseOffering {
+  id                  String           @id @default(cuid())
+  courseId            String
+  course              Course           @relation(fields: [courseId], references: [id])
+  cycleId             String
+  cycle               BiddingCycle     @relation(fields: [cycleId], references: [id])
+  professorId         String
+  professor           ProfessorProfile @relation(fields: [professorId], references: [id])
+  eligibility         String           // Programme: BM | HRM | BOTH
+  seatCap             Int
+  reservedSeatsRound1 Int              @default(0)
+  status              String           @default("DRAFT") // CourseStatus
+  mrb                 Int              @default(0)
+  additionalNotes     String?
+  courseInstructions  String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  tieBreakPolicy  TieBreakPolicy?
+  bids            Bid[]
+  allocations     AllocationResult[]
+  waitlistEntries WaitlistEntry[]
+  quotaRules      QuotaRule[]
+}
+
+model TieBreakPolicy {
+  id                    String         @id @default(cuid())
+  offeringId            String         @unique
+  offering              CourseOffering @relation(fields: [offeringId], references: [id])
+  method                String         // TieBreakMethod
+  prerequisiteCourseCode String?
+  compositeWeightJson   String?
+  manualRankJson        String?
+  isLocked              Boolean        @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model Bid {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id])
+  offeringId String
+  offering   CourseOffering @relation(fields: [offeringId], references: [id])
+  roundId    String
+  round      BiddingRound   @relation(fields: [roundId], references: [id])
+  points     Int
+  status     String         @default("ACTIVE") // BidStatus
+  placedAt   DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  history BidHistory[]
+
+  @@unique([userId, offeringId, roundId])
+}
+
+model BidHistory {
+  id        String   @id @default(cuid())
+  bidId     String
+  bid       Bid      @relation(fields: [bidId], references: [id])
+  points    Int
+  action    String
+  timestamp DateTime @default(now())
+  clientIp  String?
+}
+
+model AllocationResult {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  offeringId       String
+  offering         CourseOffering @relation(fields: [offeringId], references: [id])
+  roundId          String
+  round            BiddingRound   @relation(fields: [roundId], references: [id])
+  status           String         @default("TENTATIVE") // AllocationStatus
+  finalPoints      Int
+  tieBroken        Boolean        @default(false)
+  tieBreakRank     Int?
+  confirmedAt      DateTime?
+  withdrawnAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  confirmationActions ConfirmationAction[]
+
+  @@unique([studentProfileId, offeringId, roundId])
+}
+
+model ConfirmationAction {
+  id           String           @id @default(cuid())
+  allocationId String
+  allocation   AllocationResult @relation(fields: [allocationId], references: [id])
+  action       String           // CONFIRM | WITHDRAW
+  timestamp    DateTime         @default(now())
+  notes        String?
+}
+
+model WaitlistEntry {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  offeringId       String
+  offering         CourseOffering @relation(fields: [offeringId], references: [id])
+  position         Int
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+
+  @@unique([studentProfileId, offeringId])
+}
+
+model QuotaRule {
+  id          String         @id @default(cuid())
+  offeringId  String
+  offering    CourseOffering @relation(fields: [offeringId], references: [id])
+  batchId     String
+  batch       Batch          @relation(fields: [batchId], references: [id])
+  maxSeats    Int
+  roundNumber Int            @default(1)
+  createdAt   DateTime       @default(now())
+}
+
+model StudentCourseGrade {
+  id               String         @id @default(cuid())
+  studentProfileId String
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  courseCode       String
+  grade            Float
+  term             String?
+  createdAt        DateTime       @default(now())
+
+  @@unique([studentProfileId, courseCode])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  sentById  String?
+  sentBy    User?     @relation("SentBy", fields: [sentById], references: [id])
+  type      String    // NotificationType
+  title     String
+  message   String
+  isRead    Boolean   @default(false)
+  link      String?
+  createdAt DateTime  @default(now())
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  action     String    // AuditAction
+  entityType String
+  entityId   String
+  before     String?
+  after      String?
+  metadata   String?
+  ipAddress  String?
+  timestamp  DateTime  @default(now())
+}
+
+model ImportJob {
+  id            String    @id @default(cuid())
+  type          String
+  status        String    @default("PENDING")
+  fileName      String
+  totalRows     Int       @default(0)
+  processedRows Int       @default(0)
+  errorRows     Int       @default(0)
+  errorsJson    String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+}
+
+model CreditConstraint {
+  id         String       @id @default(cuid())
+  cycleId    String
+  cycle      BiddingCycle @relation(fields: [cycleId], references: [id])
+  programme  String       // Programme
+  minCredits Int          @default(0)
+  maxCredits Int          @default(30)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
