@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { GraduationCap } from "lucide-react";
+import { DeleteStudentButton } from "./delete-button";
 
 export default async function AdminStudentsPage() {
   const session = await auth();
@@ -41,12 +42,13 @@ export default async function AdminStudentsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Batch</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">CQPI</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {students.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center">
+                    <td colSpan={8} className="px-4 py-12 text-center">
                       <GraduationCap className="h-8 w-8 mx-auto mb-3 text-slate-300" />
                       <p className="text-slate-400 text-sm">No students registered.</p>
                     </td>
@@ -70,6 +72,9 @@ export default async function AdminStudentsPage() {
                         <Badge variant={s.isActive ? "success" : "destructive"}>
                           {s.isActive ? "Active" : "Inactive"}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <DeleteStudentButton studentId={s.id} name={s.user.name} />
                       </td>
                     </tr>
                   ))

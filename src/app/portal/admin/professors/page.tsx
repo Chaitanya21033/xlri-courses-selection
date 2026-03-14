@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { Users, BookMarked, GraduationCap } from "lucide-react";
+import { DeleteProfessorButton } from "./delete-button";
 
 export default async function AdminProfessorsPage() {
   const session = await auth();
@@ -70,12 +71,13 @@ export default async function AdminProfessorsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Joined
                   </th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {professors.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
+                    <td colSpan={9} className="px-4 py-12 text-center">
                       <GraduationCap className="h-8 w-8 mx-auto mb-3 text-slate-300" />
                       <p className="text-slate-400 text-sm">No professors registered yet.</p>
                     </td>
@@ -131,6 +133,9 @@ export default async function AdminProfessorsPage() {
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-400">
                           {formatDate(prof.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <DeleteProfessorButton professorId={prof.id} name={prof.user.name} />
                         </td>
                       </tr>
                     );

@@ -172,7 +172,19 @@ model Course {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  offerings CourseOffering[]
+  offerings   CourseOffering[]
+  attachments CourseAttachment[]
+}
+
+model CourseAttachment {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
 }
 
 model CourseOffering {
