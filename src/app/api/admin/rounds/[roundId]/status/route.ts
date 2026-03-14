@@ -7,6 +7,9 @@ import { z } from "zod";
 
 const StatusSchema = z.object({
   status: z.enum(["OPEN", "CLOSED", "CONFIRMED"]),
+  // Optional custom timestamps from the admin UI
+  opensAt: z.string().datetime().optional(),
+  closesAt: z.string().datetime().optional(),
 });
 
 export async function PATCH(
@@ -24,8 +27,8 @@ export async function PATCH(
   let body: z.infer<typeof StatusSchema>;
   try {
     body = StatusSchema.parse(await req.json());
-  } catch {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  } catch (e: any) {
+    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
   }
 
   const round = await db.biddingRound.findUnique({
@@ -37,7 +40,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Round not found" }, { status: 404 });
   }
 
-  const { status } = body;
+  const { status, opensAt: customOpensAt, closesAt: customClosesAt } = body;
 
   // Gate: cannot open round if any course in this cycle has no tie-break policy
   if (status === "OPEN") {
@@ -87,8 +90,12 @@ export async function PATCH(
     where: { id: roundId },
     data: {
       status,
-      opensAt: status === "OPEN" ? new Date() : round.opensAt,
-      closesAt: status === "CLOSED" ? new Date() : round.closesAt,
+      opensAt: status === "OPEN"
+        ? (customOpensAt ? new Date(customOpensAt) : new Date())
+        : round.opensAt,
+      closesAt: status === "CLOSED"
+        ? (customClosesAt ? new Date(customClosesAt) : new Date())
+        : (customClosesAt ? new Date(customClosesAt) : round.closesAt),
     },
   });
 
@@ -97,11 +104,13 @@ export async function PATCH(
     action:
       status === "OPEN"
         ? AUDIT_ACTION.ROUND_OPENED
+        : status === "CLOSED"
+        ? AUDIT_ACTION.ROUND_CLOSED
         : AUDIT_ACTION.ROUND_CLOSED,
     entityType: "BiddingRound",
     entityId: roundId,
     before: { status: oldStatus },
-    after: { status },
+    after: { status, opensAt: customOpensAt, closesAt: customClosesAt },
     ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
   });
 

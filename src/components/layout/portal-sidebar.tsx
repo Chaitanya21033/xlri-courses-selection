@@ -20,6 +20,7 @@ import {
   FileText,
   Clock,
   TrendingUp,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ const adminNav: NavItem[] = [
   { label: "Dashboard", href: "/portal/admin", icon: LayoutDashboard },
   { label: "Bidding Cycles", href: "/portal/admin/cycles", icon: Clock },
   { label: "Courses", href: "/portal/admin/courses", icon: BookMarked },
+  { label: "Import Users", href: "/portal/admin/import", icon: Upload },
   { label: "Students", href: "/portal/admin/students", icon: GraduationCap },
   { label: "Professors", href: "/portal/admin/professors", icon: Users },
   { label: "Rounds", href: "/portal/admin/rounds", icon: ClipboardList },

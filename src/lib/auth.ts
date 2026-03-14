@@ -18,7 +18,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.warn("[auth] authorize: missing email or password");
+          return null;
+        }
 
         try {
           const user = await db.user.findUnique({
@@ -29,13 +32,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           });
 
-          if (!user || !user.isActive) return null;
+          if (!user) {
+            console.warn("[auth] authorize: no user found for", credentials.email);
+            return null;
+          }
+          if (!user.isActive) {
+            console.warn("[auth] authorize: user is inactive:", credentials.email);
+            return null;
+          }
 
           const valid = await bcrypt.compare(
             credentials.password as string,
             user.passwordHash
           );
-          if (!valid) return null;
+          if (!valid) {
+            console.warn("[auth] authorize: wrong password for", credentials.email);
+            return null;
+          }
 
           await db.user.update({
             where: { id: user.id },
@@ -52,7 +65,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             programme: user.studentProfile?.programme ?? null,
           };
         } catch (err) {
-          console.error("[auth] authorize error:", err);
+          console.error("[auth] authorize: DB error →", err);
           return null;
         }
       },

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { ProfessorCourseEditForm } from "./prof-course-edit-form";
 import { TieBreakForm } from "@/app/portal/admin/courses/[id]/tiebreak-form";
+import { OutlineUpload } from "./outline-upload";
 
 export default async function ProfessorCourseDetailPage({
   params,
@@ -111,6 +112,20 @@ export default async function ProfessorCourseDetailPage({
               <p className="text-slate-400 text-xs mt-3">Course is in {offering.status} state — editing is disabled.</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Course Outline Upload */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Course Outline Document</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OutlineUpload
+            offeringId={id}
+            existingUrl={offering.outlineFileUrl ?? null}
+            existingName={offering.outlineFileName ?? null}
+          />
         </CardContent>
       </Card>
 
