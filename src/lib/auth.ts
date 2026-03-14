@@ -20,36 +20,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email as string },
-          include: {
-            studentProfile: true,
-            professorProfile: true,
-          },
-        });
+        try {
+          const user = await db.user.findUnique({
+            where: { email: credentials.email as string },
+            include: {
+              studentProfile: true,
+              professorProfile: true,
+            },
+          });
 
-        if (!user || !user.isActive) return null;
+          if (!user || !user.isActive) return null;
 
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
-        if (!valid) return null;
+          const valid = await bcrypt.compare(
+            credentials.password as string,
+            user.passwordHash
+          );
+          if (!valid) return null;
 
-        await db.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
-        });
+          await db.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          profileId:
-            user.studentProfile?.id ?? user.professorProfile?.id ?? null,
-          programme: user.studentProfile?.programme ?? null,
-        };
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            profileId:
+              user.studentProfile?.id ?? user.professorProfile?.id ?? null,
+            programme: user.studentProfile?.programme ?? null,
+          };
+        } catch (err) {
+          console.error("[auth] authorize error:", err);
+          return null;
+        }
       },
     }),
   ],
