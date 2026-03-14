@@ -7,9 +7,9 @@ import { z } from "zod";
 
 const StatusSchema = z.object({
   status: z.enum(["OPEN", "CLOSED", "CONFIRMED"]),
-  // Optional custom timestamps from the admin UI
-  opensAt: z.string().datetime().optional(),
-  closesAt: z.string().datetime().optional(),
+  // Accept both datetime-local ("2026-03-14T12:48") and full ISO strings
+  opensAt: z.string().optional(),
+  closesAt: z.string().optional(),
 });
 
 export async function PATCH(
