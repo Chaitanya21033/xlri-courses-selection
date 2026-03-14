@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { Bell, CheckCircle2, Users, Send } from "lucide-react";
+import { BroadcastForm } from "./broadcast-form";
 
 export default async function AdminNotificationsPage() {
   const session = await auth();
@@ -55,6 +56,19 @@ export default async function AdminNotificationsPage() {
           System-wide notification log and status.
         </p>
       </div>
+
+      {/* Broadcast Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="h-4 w-4 text-indigo-500" />
+            Send Notification
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BroadcastForm />
+        </CardContent>
+      </Card>
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

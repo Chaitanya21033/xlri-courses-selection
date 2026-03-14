@@ -8,6 +8,7 @@ import { formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { RoundControls } from "./round-controls";
+import { AllocateButton } from "./allocate-button";
 
 export default async function AdminRoundsPage({
   searchParams,
@@ -95,7 +96,12 @@ export default async function AdminRoundsPage({
                       <span>{round._count.allocationResults} allocations</span>
                     </div>
                   </div>
-                  <RoundControls roundId={round.id} status={round.status} />
+                  <div className="flex flex-col items-end gap-2">
+                    <RoundControls roundId={round.id} status={round.status} />
+                    {round.status === "CLOSED" && (
+                      <AllocateButton roundId={round.id} />
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
