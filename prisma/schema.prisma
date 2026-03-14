@@ -166,13 +166,28 @@ model Course {
   termNumber           Int?     // 4 | 5 | 6 (which term this course is typically offered)
   defaultEligibility   String?  @default("BOTH") // BM | HRM | GMP | BM_HRM | BM_GMP | HRM_GMP | ALL
   defaultSeatCap       Int?     @default(40)
+  // Default tie-break preference (applied when admin links to a cycle)
+  defaultTieBreakMethod   String?  // TieBreakMethod
+  defaultTieBreakPrereqCode String?
   // Ownership
   createdByProfessorId String?  // ProfessorProfile.id of the professor who created this
   isActive             Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  offerings CourseOffering[]
+  offerings   CourseOffering[]
+  attachments CourseAttachment[]
+}
+
+model CourseAttachment {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
 }
 
 model CourseOffering {
