@@ -12,22 +12,10 @@
  */
 
 import "dotenv/config";
-import path from "path";
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
 import bcrypt from "bcryptjs";
 
-function getDbUrl(): string {
-  const raw = process.env.DATABASE_URL ?? "file:./dev.db";
-  if (raw.startsWith("file:./") || raw.startsWith("file:../")) {
-    const relativePath = raw.replace(/^file:/, "");
-    return "file:" + path.resolve(process.cwd(), relativePath);
-  }
-  return raw;
-}
-
-const adapter = new PrismaLibSql({ url: getDbUrl() });
-const db = new PrismaClient({ adapter });
+const db = new PrismaClient();
 
 let HASH = "";
 
