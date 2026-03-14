@@ -9,8 +9,9 @@ const RoundSchema = z.object({
   cycleId: z.string(),
   roundNumber: z.number().int().min(1),
   name: z.string().min(2),
-  opensAt: z.string().datetime().optional(),
-  closesAt: z.string().datetime().optional(),
+  // Accept both datetime-local ("2026-03-14T12:48") and full ISO strings
+  opensAt: z.string().optional(),
+  closesAt: z.string().optional(),
   isConfirmationRound: z.boolean().default(false),
   quotaRelaxed: z.boolean().default(false),
 });
