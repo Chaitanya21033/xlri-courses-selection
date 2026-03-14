@@ -50,10 +50,10 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` with your PostgreSQL connection string:
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://user:password@localhost:5432/xlri_bidding"
 NEXTAUTH_SECRET="replace-with-a-random-string-at-least-32-chars"
 NEXTAUTH_URL="http://localhost:3000"
 ```
@@ -62,6 +62,8 @@ Generate a secret:
 ```bash
 openssl rand -base64 32
 ```
+
+> **Note:** This app requires PostgreSQL. SQLite is not supported.
 
 ### 3. Set up the database
 
@@ -126,7 +128,7 @@ src/
 │   └── layout/                 PublicHeader, PublicFooter, PortalSidebar
 └── lib/
     ├── auth.ts                 NextAuth JWT credentials provider
-    ├── db.ts                   Prisma + libSQL adapter
+    ├── db.ts                   Prisma + PrismaPg adapter (PostgreSQL)
     ├── bidding-engine.ts       MRB, tie-break, allocation, validation
     ├── audit.ts                Audit log + notification helpers
     ├── constants.ts            Domain enums and defaults
@@ -135,7 +137,7 @@ src/
 
 ### Database
 
-SQLite (dev) via libSQL. Swap `DATABASE_URL` to PostgreSQL for production — no code changes required.
+PostgreSQL via `@prisma/adapter-pg`. The `DATABASE_URL` must be a PostgreSQL connection string.
 
 ### Bidding Engine (`src/lib/bidding-engine.ts`)
 
@@ -406,16 +408,6 @@ DATABASE_URL="postgresql://user:password@host:5432/bidscholar"
 NEXTAUTH_SECRET="<32+ char random string>"
 NEXTAUTH_URL="https://yourdomain.com"
 ```
-
-### Switch to PostgreSQL
-
-1. Update `DATABASE_URL`
-2. In `prisma/schema.prisma`, change `provider = "sqlite"` to `provider = "postgresql"`
-3. In `src/lib/db.ts`, remove the libSQL adapter and use standard Prisma client:
-   ```ts
-   import { PrismaClient } from "@prisma/client";
-   export const db = new PrismaClient();
-   ```
 
 ### Build and deploy
 
