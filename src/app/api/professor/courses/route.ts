@@ -17,6 +17,8 @@ export const ELIGIBILITY_LABELS: Record<EligibilityValue, string> = {
   ALL: "All programmes",
 };
 
+const TIE_BREAK_METHODS = ["CQPI_DESC", "GRADE_DESC", "COMPOSITE_RANK", "LOTTERY", "MANUAL_RANK"] as const;
+
 const CreateCourseSchema = z.object({
   code: z.string().min(2).max(20),
   title: z.string().min(3).max(200),
@@ -28,6 +30,8 @@ const CreateCourseSchema = z.object({
   termNumber: z.number().int().min(1).max(12).optional(),
   defaultEligibility: z.enum(ELIGIBILITY_OPTIONS).default("ALL"),
   defaultSeatCap: z.number().int().min(1).max(1000).default(40),
+  defaultTieBreakMethod: z.enum(TIE_BREAK_METHODS).optional(),
+  defaultTieBreakPrereqCode: z.string().optional(),
 });
 
 // GET — list all courses created by this professor
@@ -107,6 +111,8 @@ export async function POST(req: NextRequest) {
       termNumber: body.termNumber ?? null,
       defaultEligibility: body.defaultEligibility,
       defaultSeatCap: body.defaultSeatCap,
+      defaultTieBreakMethod: body.defaultTieBreakMethod ?? null,
+      defaultTieBreakPrereqCode: body.defaultTieBreakPrereqCode ?? null,
       createdByProfessorId: user.professorProfile.id,
     },
   });
