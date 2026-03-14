@@ -184,6 +184,8 @@ model CourseOffering {
   mrb                 Int              @default(0)
   additionalNotes     String?
   courseInstructions  String?
+  outlineFileUrl      String?
+  outlineFileName     String?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
