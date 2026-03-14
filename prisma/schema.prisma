@@ -143,7 +143,7 @@ model BiddingRound {
 model PointAccount {
   id               String         @id @default(cuid())
   studentProfileId String
-  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   cycleId          String
   cycle            BiddingCycle   @relation(fields: [cycleId], references: [id])
   totalPoints      Int
@@ -261,7 +261,7 @@ model BidHistory {
 model AllocationResult {
   id               String         @id @default(cuid())
   studentProfileId String
-  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   offeringId       String
   offering         CourseOffering @relation(fields: [offeringId], references: [id])
   roundId          String
@@ -292,7 +292,7 @@ model ConfirmationAction {
 model WaitlistEntry {
   id               String         @id @default(cuid())
   studentProfileId String
-  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   offeringId       String
   offering         CourseOffering @relation(fields: [offeringId], references: [id])
   position         Int
@@ -316,7 +316,7 @@ model QuotaRule {
 model StudentCourseGrade {
   id               String         @id @default(cuid())
   studentProfileId String
-  student          StudentProfile @relation(fields: [studentProfileId], references: [id])
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
   courseCode       String
   grade            Float
   term             String?
