@@ -28,6 +28,43 @@ const OfferingSchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"),
 });
 
+// GET — list courses (optionally filtered to those not yet linked to a cycle)
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session || (session.user as any)?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const unlinked = searchParams.get("unlinked") === "true";
+  const cycleId = searchParams.get("cycleId");
+
+  if (unlinked && cycleId) {
+    // Return courses NOT already linked to this cycle
+    const linkedCourseIds = (
+      await db.courseOffering.findMany({
+        where: { cycleId },
+        select: { courseId: true },
+      })
+    ).map((o) => o.courseId);
+
+    const courses = await db.course.findMany({
+      where: {
+        isActive: true,
+        id: linkedCourseIds.length > 0 ? { notIn: linkedCourseIds } : undefined,
+      },
+      orderBy: [{ termNumber: "asc" }, { code: "asc" }],
+    });
+    return NextResponse.json(courses);
+  }
+
+  const courses = await db.course.findMany({
+    where: { isActive: true },
+    orderBy: { code: "asc" },
+  });
+  return NextResponse.json(courses);
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session || (session.user as any)?.role !== "ADMIN") {

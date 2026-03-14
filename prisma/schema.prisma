@@ -154,17 +154,23 @@ model PointAccount {
 }
 
 model Course {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  title         String
-  credits       Int
-  description   String?
-  prerequisites String?
-  learningGoals String?
-  scheduleNotes String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  code                 String   @unique
+  title                String
+  credits              Int
+  description          String?
+  prerequisites        String?
+  learningGoals        String?
+  scheduleNotes        String?
+  // Professor-defined defaults (used when linking to a cycle)
+  termNumber           Int?     // 4 | 5 | 6 (which term this course is typically offered)
+  defaultEligibility   String?  @default("BOTH") // BM | HRM | GMP | BM_HRM | BM_GMP | HRM_GMP | ALL
+  defaultSeatCap       Int?     @default(40)
+  // Ownership
+  createdByProfessorId String?  // ProfessorProfile.id of the professor who created this
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   offerings CourseOffering[]
 }

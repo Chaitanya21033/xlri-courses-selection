@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus } from "lucide-react";
 import { CycleEditForm } from "./cycle-edit-form";
 import { RoundCreateForm } from "./round-create-form";
+import { CycleCourses } from "./cycle-courses";
 
 export default async function CycleDetailPage({
   params,
@@ -75,6 +76,16 @@ export default async function CycleDetailPage({
         <CardHeader><CardTitle>Edit Cycle Settings</CardTitle></CardHeader>
         <CardContent>
           <CycleEditForm cycle={cycle} />
+        </CardContent>
+      </Card>
+
+      {/* Courses */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Courses in this Cycle</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CycleCourses cycleId={id} />
         </CardContent>
       </Card>
 
