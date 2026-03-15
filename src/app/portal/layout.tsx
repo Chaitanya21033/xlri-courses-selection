@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PortalSidebar } from "@/components/layout/portal-sidebar";
+import { MobileBanner } from "@/components/layout/mobile-banner";
 
 export default async function PortalLayout({
   children,
@@ -24,6 +25,7 @@ export default async function PortalLayout({
         programme={user.programme}
       />
       <main className="flex-1 overflow-y-auto">
+        <MobileBanner />
         <div className="min-h-full p-6 lg:p-8">{children}</div>
       </main>
     </div>
