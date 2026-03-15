@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   const { offeringId, roundId, points } = body;
 
-  // Server-side validation
+  // Server-side validation (outside transaction — cheap read-only check)
   const validation = await validateBid(userId, offeringId, roundId, points);
   if (!validation.valid) {
     return NextResponse.json({ error: validation.reason }, { status: 422 });
@@ -52,75 +52,90 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Offering not found" }, { status: 404 });
   }
 
-  const existing = await db.bid.findUnique({
-    where: { userId_offeringId_roundId: { userId, offeringId, roundId } },
-  });
-
-  const pointAccount = await db.pointAccount.findUnique({
-    where: {
-      studentProfileId_cycleId: {
-        studentProfileId: sp.id,
-        cycleId: offering.cycleId,
-      },
-    },
-  });
-
-  if (!pointAccount) {
-    return NextResponse.json({ error: "Point account not found" }, { status: 404 });
-  }
-
-  let bid: typeof existing;
+  // Wrap point reservation + bid write in a transaction to prevent race conditions.
+  // Using $transaction ensures the point decrement and bid creation are atomic.
+  let bid: any;
   let action: string;
 
-  if (existing) {
-    const diff = points - existing.points;
-    await db.pointAccount.update({
-      where: {
-        studentProfileId_cycleId: { studentProfileId: sp.id, cycleId: offering.cycleId },
-      },
-      data: { reservedPoints: { increment: diff } },
+  try {
+    const result = await db.$transaction(async (tx) => {
+      // Re-fetch point account inside transaction for accurate balance
+      const pointAccount = await tx.pointAccount.findUnique({
+        where: {
+          studentProfileId_cycleId: {
+            studentProfileId: sp.id,
+            cycleId: offering.cycleId,
+          },
+        },
+      });
+      if (!pointAccount) throw new Error("Point account not found");
+
+      const existingBid = await tx.bid.findUnique({
+        where: { userId_offeringId_roundId: { userId, offeringId, roundId } },
+      });
+
+      const currentBidPoints = existingBid?.points ?? 0;
+      const diff = points - currentBidPoints;
+      const available =
+        pointAccount.totalPoints -
+        pointAccount.usedPoints -
+        pointAccount.reservedPoints;
+
+      // Re-validate inside transaction to catch concurrent updates
+      if (diff > available) {
+        throw new Error(
+          `Insufficient bid points. Available: ${available + currentBidPoints}`
+        );
+      }
+
+      // Atomically update reserved points
+      await tx.pointAccount.update({
+        where: {
+          studentProfileId_cycleId: {
+            studentProfileId: sp.id,
+            cycleId: offering.cycleId,
+          },
+        },
+        data: { reservedPoints: { increment: diff } },
+      });
+
+      if (existingBid) {
+        const updatedBid = await tx.bid.update({
+          where: { id: existingBid.id },
+          data: { points, updatedAt: new Date() },
+        });
+        await tx.bidHistory.create({
+          data: {
+            bidId: existingBid.id,
+            points,
+            action: "UPDATED",
+            clientIp: req.headers.get("x-forwarded-for") ?? undefined,
+          },
+        });
+        return { bid: updatedBid, action: "UPDATED" };
+      } else {
+        const newBid = await tx.bid.create({
+          data: { userId, offeringId, roundId, points, status: BID_STATUS.ACTIVE },
+        });
+        await tx.bidHistory.create({
+          data: {
+            bidId: newBid.id,
+            points,
+            action: "PLACED",
+            clientIp: req.headers.get("x-forwarded-for") ?? undefined,
+          },
+        });
+        return { bid: newBid, action: "PLACED" };
+      }
     });
 
-    bid = await db.bid.update({
-      where: { id: existing.id },
-      data: { points, updatedAt: new Date() },
-    });
-
-    await db.bidHistory.create({
-      data: {
-        bidId: existing.id,
-        points,
-        action: "UPDATED",
-        clientIp: req.headers.get("x-forwarded-for") ?? undefined,
-      },
-    });
-
-    action = "UPDATED";
-  } else {
-    await db.pointAccount.update({
-      where: {
-        studentProfileId_cycleId: { studentProfileId: sp.id, cycleId: offering.cycleId },
-      },
-      data: { reservedPoints: { increment: points } },
-    });
-
-    bid = await db.bid.create({
-      data: { userId, offeringId, roundId, points, status: BID_STATUS.ACTIVE },
-    });
-
-    await db.bidHistory.create({
-      data: {
-        bidId: bid!.id,
-        points,
-        action: "PLACED",
-        clientIp: req.headers.get("x-forwarded-for") ?? undefined,
-      },
-    });
-
-    action = "PLACED";
+    bid = result.bid;
+    action = result.action;
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 422 });
   }
 
-  // Recompute MRB
+  // Recompute MRB after transaction commits
   const cycle = await db.biddingCycle.findUnique({ where: { id: offering.cycleId } });
   await recomputeOfferingMRB(offeringId, roundId, cycle?.minBidRequired ?? true);
 
@@ -128,7 +143,7 @@ export async function POST(req: NextRequest) {
     userId,
     action: action === "PLACED" ? AUDIT_ACTION.BID_PLACED : AUDIT_ACTION.BID_UPDATED,
     entityType: "Bid",
-    entityId: bid!.id,
+    entityId: bid.id,
     after: { points, offeringId, roundId },
     ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
   });

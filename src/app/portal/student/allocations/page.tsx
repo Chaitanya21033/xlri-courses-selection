@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAllocationStatusColor, formatDate } from "@/lib/utils";
-import { Trophy, Download } from "lucide-react";
+import { Trophy, CheckCircle2, XCircle, Download } from "lucide-react";
+import { ConfirmationActions } from "./confirmation-actions";
 
 export default async function StudentAllocationsPage() {
   const session = await auth();
@@ -29,6 +30,7 @@ export default async function StudentAllocationsPage() {
         include: {
           course: true,
           professor: { include: { user: true } },
+          cycle: true,
         },
       },
       round: { include: { cycle: { include: { term: true } } } },
@@ -36,9 +38,26 @@ export default async function StudentAllocationsPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Check if any confirmation round is currently open for this student's cycles
+  const cycleIds = [...new Set(allocations.map((a) => a.offering.cycleId))];
+  const openConfirmationRound = cycleIds.length > 0
+    ? await db.biddingRound.findFirst({
+        where: {
+          cycleId: { in: cycleIds },
+          isConfirmationRound: true,
+          status: "OPEN",
+        },
+      })
+    : null;
+
   const confirmed = allocations.filter((a) => a.status === "CONFIRMED");
   const tentative = allocations.filter((a) => a.status === "TENTATIVE");
+  const withdrawn = allocations.filter((a) => a.status === "WITHDRAWN");
   const totalCredits = confirmed.reduce(
+    (sum, a) => sum + a.offering.course.credits,
+    0
+  );
+  const tentativeCredits = tentative.reduce(
     (sum, a) => sum + a.offering.course.credits,
     0
   );
@@ -52,26 +71,58 @@ export default async function StudentAllocationsPage() {
             Course allocations across all bidding rounds.
           </p>
         </div>
+        {allocations.some((a) => a.status === "CONFIRMED" || a.status === "TENTATIVE") && (
+          <a
+            href="/api/student/export/allocations"
+            download
+            className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Download CSV
+          </a>
+        )}
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Confirmation round banner */}
+      {openConfirmationRound && tentative.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <div className="text-sm text-amber-800">
+            <strong>Confirmation round is open.</strong> You have{" "}
+            <strong>{tentative.length}</strong> tentative allocation(s) waiting
+            for your action. Confirm courses you want to keep, or withdraw to
+            free up your bid points.
+          </div>
+        </div>
+      )}
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Confirmed Courses</p>
+            <p className="text-sm text-slate-500">Confirmed</p>
             <p className="text-2xl font-bold text-emerald-600">{confirmed.length}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{totalCredits} credits</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
             <p className="text-sm text-slate-500">Tentative</p>
             <p className="text-2xl font-bold text-amber-600">{tentative.length}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{tentativeCredits} credits</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-slate-500">Confirmed Credits</p>
+            <p className="text-sm text-slate-500">Withdrawn</p>
+            <p className="text-2xl font-bold text-slate-400">{withdrawn.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-sm text-slate-500">Locked Credits</p>
             <p className="text-2xl font-bold text-slate-900">{totalCredits}</p>
+            <p className="text-xs text-slate-400 mt-0.5">confirmed only</p>
           </CardContent>
         </Card>
       </div>
@@ -100,6 +151,9 @@ export default async function StudentAllocationsPage() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Term</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tie-break</th>
+                    {openConfirmationRound && (
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Action</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -135,6 +189,18 @@ export default async function StudentAllocationsPage() {
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
+                      {openConfirmationRound && (
+                        <td className="px-4 py-3 text-right">
+                          {(alloc.status === "TENTATIVE" || alloc.status === "CONFIRMED") ? (
+                            <ConfirmationActions
+                              allocationId={alloc.id}
+                              status={alloc.status}
+                            />
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -142,14 +208,6 @@ export default async function StudentAllocationsPage() {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Confirmation round note */}
-      {tentative.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-          <strong>{tentative.length} tentative allocation(s)</strong> require confirmation during the confirmation round.
-          You may also withdraw from confirmed courses during the confirmation window.
-        </div>
       )}
     </div>
   );

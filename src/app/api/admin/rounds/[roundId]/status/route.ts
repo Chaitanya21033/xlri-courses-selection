@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 import { AUDIT_ACTION, BIDDING_ROUND_STATUS, COURSE_STATUS } from "@/lib/constants";
+import { initializePointAccounts } from "@/lib/bidding-engine";
 import { z } from "zod";
 
 const StatusSchema = z.object({
@@ -63,6 +64,14 @@ export async function PATCH(
       );
     }
 
+    // Lock all tie-break policies for this cycle when round opens
+    await db.tieBreakPolicy.updateMany({
+      where: {
+        offering: { cycleId: round.cycleId },
+      },
+      data: { isLocked: true },
+    });
+
     // Update eligible courses to BIDDING_OPEN
     await db.courseOffering.updateMany({
       where: {
@@ -71,6 +80,9 @@ export async function PATCH(
       },
       data: { status: COURSE_STATUS.BIDDING_OPEN },
     });
+
+    // Initialize/refresh point accounts (with carry-forward if configured)
+    await initializePointAccounts(round.cycleId, round.cycle.carryForwardEnabled);
   }
 
   if (status === "CLOSED") {

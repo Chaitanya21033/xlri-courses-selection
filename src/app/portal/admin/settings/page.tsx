@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Database, ShieldCheck, ToggleLeft, Sliders } from "lucide-react";
+import { SettingsEditor } from "./settings-editor";
 
 export default async function AdminSettingsPage() {
   const session = await auth();
@@ -46,35 +47,7 @@ export default async function AdminSettingsPage() {
           <CardDescription>Key-value configuration stored in the database.</CardDescription>
         </CardHeader>
         <CardContent>
-          {systemSettings.length === 0 ? (
-            <div className="py-8 text-center text-slate-400">
-              <Database className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No system settings configured.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Key</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Value</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Last Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {systemSettings.map((s) => (
-                    <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/60">
-                      <td className="px-4 py-3 font-mono text-slate-700">{s.key}</td>
-                      <td className="px-4 py-3 font-mono text-indigo-700">{s.value}</td>
-                      <td className="px-4 py-3 text-xs text-slate-400">
-                        {new Date(s.updatedAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <SettingsEditor settings={systemSettings} />
         </CardContent>
       </Card>
 

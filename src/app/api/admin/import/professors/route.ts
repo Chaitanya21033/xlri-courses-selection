@@ -120,7 +120,25 @@ export async function POST(req: NextRequest) {
   }
 
   const created = results.filter((r) => r.status === "created").length;
-  const skipped = results.filter((r) => r.status !== "created").length;
+  const skipped = results.filter((r) => r.status === "skipped").length;
+  const errors = results.filter((r) => r.status === "error").length;
 
-  return NextResponse.json({ created, skipped, results }, { status: 200 });
+  await db.importJob.create({
+    data: {
+      type: "PROFESSORS",
+      status: "COMPLETED",
+      fileName: file.name,
+      totalRows: rows.length,
+      processedRows: created,
+      errorRows: errors + skipped,
+      errorsJson: JSON.stringify(
+        results
+          .filter((r) => r.status !== "created")
+          .map((r) => ({ email: r.email, reason: r.error }))
+      ),
+      completedAt: new Date(),
+    },
+  });
+
+  return NextResponse.json({ created, skipped, errors, results }, { status: 200 });
 }
