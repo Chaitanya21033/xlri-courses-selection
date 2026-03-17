@@ -3,8 +3,22 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+// Whitelist of allowed setting keys to prevent configuration injection
+const ALLOWED_SETTING_KEYS = [
+  "system_notice",
+  "maintenance_mode",
+  "max_bid_points",
+  "min_bid_points",
+  "max_courses_per_student",
+  "min_credits",
+  "max_credits",
+  "default_seat_cap",
+  "carry_forward_enabled",
+  "cross_programme_enabled",
+] as const;
+
 const UpsertSchema = z.object({
-  key: z.string().min(1),
+  key: z.enum(ALLOWED_SETTING_KEYS),
   value: z.string(),
 });
 
@@ -27,7 +41,7 @@ export async function PUT(req: NextRequest) {
   try {
     body = UpsertSchema.parse(await req.json());
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
   const setting = await db.systemSetting.upsert({

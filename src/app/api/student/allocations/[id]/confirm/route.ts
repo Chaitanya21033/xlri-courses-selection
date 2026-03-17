@@ -28,8 +28,9 @@ export async function POST(
     return NextResponse.json({ error: "Student profile not found" }, { status: 404 });
   }
 
-  const allocation = await db.allocationResult.findUnique({
-    where: { id: allocationId },
+  // Proactive IDOR prevention: query by both ID and student ownership
+  const allocation = await db.allocationResult.findFirst({
+    where: { id: allocationId, studentProfileId: user.studentProfile.id },
     include: {
       offering: { include: { course: true, cycle: true } },
       round: true,
@@ -38,9 +39,6 @@ export async function POST(
 
   if (!allocation) {
     return NextResponse.json({ error: "Allocation not found" }, { status: 404 });
-  }
-  if (allocation.studentProfileId !== user.studentProfile.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (allocation.status !== ALLOCATION_STATUS.TENTATIVE) {
     return NextResponse.json(

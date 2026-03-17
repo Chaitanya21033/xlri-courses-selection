@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
 
 /**
  * GET /api/admin/export/allocations?roundId=xxx
@@ -82,10 +83,22 @@ export async function GET(req: NextRequest) {
     )
     .join("\n");
 
+  // Audit log for PII data export
+  const adminId = (session.user as any)?.id;
+  await createAuditLog({
+    userId: adminId,
+    action: "DATA_EXPORT",
+    entityType: "AllocationResult",
+    entityId: roundId,
+    after: { type: "CSV_EXPORT", recordCount: allocations.length },
+    ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
+  });
+
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="allocations-${roundId}.csv"`,
+      "Cache-Control": "no-store, no-cache, must-revalidate, private",
     },
   });
 }

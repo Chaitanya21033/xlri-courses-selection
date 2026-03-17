@@ -31,7 +31,7 @@ export async function PATCH(
   try {
     body = OverrideSchema.parse(await req.json());
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
   const allocation = await db.allocationResult.findUnique({

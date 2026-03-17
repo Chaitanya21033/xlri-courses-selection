@@ -30,7 +30,7 @@ export async function POST(
   try {
     body = TieBreakSchema.parse(await req.json());
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
   const existing = await db.tieBreakPolicy.findUnique({ where: { offeringId: id } });

@@ -9,7 +9,10 @@ const BroadcastSchema = z.object({
   type: z.enum(["ANNOUNCEMENT", "ROUND_OPENED", "ROUND_CLOSED", "ALLOCATION_RESULT", "CONFIRMATION_REQUIRED", "COURSE_CANCELLED", "SYSTEM"]),
   title: z.string().min(2).max(200),
   message: z.string().min(2).max(2000),
-  link: z.string().optional(),
+  link: z.string().refine(
+    (val) => !val || (val.startsWith("/") && !val.startsWith("//")),
+    { message: "Link must be a relative path starting with /" }
+  ).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -23,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     body = BroadcastSchema.parse(await req.json());
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
   const roleMap: Record<string, string | undefined> = {

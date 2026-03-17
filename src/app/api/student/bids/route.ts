@@ -9,7 +9,7 @@ import { z } from "zod";
 const BidSchema = z.object({
   offeringId: z.string(),
   roundId: z.string(),
-  points: z.number().int().min(0),
+  points: z.number().int().min(0).max(100000),
 });
 
 export async function POST(req: NextRequest) {
