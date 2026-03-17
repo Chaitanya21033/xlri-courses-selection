@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
-import { AUDIT_ACTION } from "@/lib/constants";
+import { AUDIT_ACTION, COURSE_STATUS } from "@/lib/constants";
 import { z } from "zod";
 
 const UpdateSchema = z.object({
@@ -90,4 +90,44 @@ export async function PATCH(
 
   await createAuditLog({ userId, action: AUDIT_ACTION.COURSE_UPDATED, entityType: "CourseOffering", entityId: id, before: offering, after: updated });
   return NextResponse.json(updated);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session || (session.user as any)?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const userId = (session.user as any)?.id;
+  const { id } = await params;
+
+  const offering = await db.courseOffering.findUnique({
+    where: { id },
+    include: { course: true, _count: { select: { bids: true, allocations: true } } },
+  });
+  if (!offering) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Only allow deletion of DRAFT or CANCELLED offerings
+  if (![COURSE_STATUS.DRAFT, COURSE_STATUS.CANCELLED].includes(offering.status as any)) {
+    return NextResponse.json(
+      { error: "Only DRAFT or CANCELLED offerings can be deleted. Cancel the course first." },
+      { status: 422 }
+    );
+  }
+
+  // Delete related records first
+  await db.tieBreakPolicy.deleteMany({ where: { offeringId: id } });
+  await db.courseOffering.delete({ where: { id } });
+
+  await createAuditLog({
+    userId,
+    action: AUDIT_ACTION.COURSE_DELETED,
+    entityType: "CourseOffering",
+    entityId: id,
+    before: { courseCode: offering.course.code, courseTitle: offering.course.title },
+  });
+
+  return NextResponse.json({ success: true });
 }

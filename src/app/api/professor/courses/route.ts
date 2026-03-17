@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { createAuditLog } from "@/lib/audit";
+import { AUDIT_ACTION } from "@/lib/constants";
 import { z } from "zod";
 
 // All eligibility values supported
@@ -118,4 +120,51 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json(course, { status: 201 });
+}
+
+// DELETE — delete a standalone course (not yet linked to any offering)
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session || (session.user as any)?.role !== "PROFESSOR") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const userId = (session.user as any)?.id;
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { professorProfile: true },
+  });
+  if (!user?.professorProfile) {
+    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  }
+
+  const { courseId } = await req.json();
+  if (!courseId) {
+    return NextResponse.json({ error: "courseId is required" }, { status: 400 });
+  }
+
+  const course = await db.course.findUnique({
+    where: { id: courseId },
+    include: { _count: { select: { offerings: true } } },
+  });
+  if (!course) return NextResponse.json({ error: "Course not found" }, { status: 404 });
+  if (course.createdByProfessorId !== user.professorProfile.id) {
+    return NextResponse.json({ error: "Forbidden — you can only delete courses you created" }, { status: 403 });
+  }
+  if (course._count.offerings > 0) {
+    return NextResponse.json({ error: "Cannot delete a course that has active offerings" }, { status: 422 });
+  }
+
+  await db.courseAttachment.deleteMany({ where: { courseId } });
+  await db.course.delete({ where: { id: courseId } });
+
+  await createAuditLog({
+    userId,
+    action: AUDIT_ACTION.COURSE_DELETED,
+    entityType: "Course",
+    entityId: courseId,
+    before: { code: course.code, title: course.title },
+  });
+
+  return NextResponse.json({ success: true });
 }

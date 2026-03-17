@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AlertTriangle, BookMarked, Plus } from "lucide-react";
+import { DeleteOfferingButton, DeleteStandaloneCourseButton } from "./delete-course-button";
 
 const ELIGIBILITY_LABELS: Record<string, string> = {
   BM: "BM only",
@@ -112,9 +113,12 @@ export default async function ProfessorCoursesPage() {
                     )}
                   </div>
 
-                  <p className="text-xs text-amber-600 mt-3">
-                    Admin will link this to an active bidding cycle.
-                  </p>
+                  <div className="flex items-center justify-between mt-3">
+                    <p className="text-xs text-amber-600">
+                      Admin will link this to an active bidding cycle.
+                    </p>
+                    <DeleteStandaloneCourseButton courseId={c.id} courseTitle={c.title} />
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -177,16 +181,10 @@ export default async function ProfessorCoursesPage() {
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="text-center p-2 bg-slate-50 rounded-lg">
                       <p className="text-xs text-slate-400">Seats</p>
                       <p className="font-bold text-slate-700">{o.seatCap}</p>
-                    </div>
-                    <div className="text-center p-2 bg-slate-50 rounded-lg">
-                      <p className="text-xs text-slate-400">Bids</p>
-                      <p className={`font-bold ${o._count.bids > o.seatCap ? "text-red-600" : "text-slate-700"}`}>
-                        {o._count.bids}
-                      </p>
                     </div>
                     <div className="text-center p-2 bg-indigo-50 rounded-lg">
                       <p className="text-xs text-indigo-400">MRB</p>
@@ -213,11 +211,14 @@ export default async function ProfessorCoursesPage() {
                     </div>
                   )}
 
-                  <Link href={`/portal/professor/courses/${o.id}`}>
-                    <span className="text-xs text-indigo-600 hover:underline">
-                      {o.tieBreakPolicy ? "Edit course details" : "Configure tie-break policy →"}
-                    </span>
-                  </Link>
+                  <div className="flex items-center justify-between">
+                    <Link href={`/portal/professor/courses/${o.id}`}>
+                      <span className="text-xs text-indigo-600 hover:underline">
+                        {o.tieBreakPolicy ? "Edit course details" : "Configure tie-break policy →"}
+                      </span>
+                    </Link>
+                    <DeleteOfferingButton offeringId={o.id} courseTitle={o.course.title} status={o.status} />
+                  </div>
                 </CardContent>
               </Card>
             ))}

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 
-interface Course { id: string; code: string; title: string; credits: number; }
+interface Course { id: string; code: string; title: string; credits: number; createdByProfessorId?: string | null; }
 interface Cycle { id: string; name: string; term: { name: string }; }
 interface Professor { id: string; user: { name: string }; department: string; }
 
@@ -127,7 +127,15 @@ export default function NewCourseOfferingPage() {
                 <select
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
                   value={form.courseId}
-                  onChange={e => f("courseId", e.target.value)}
+                  onChange={e => {
+                    const selectedCourseId = e.target.value;
+                    f("courseId", selectedCourseId);
+                    // Auto-populate the professor who originally created this course
+                    const selectedCourse = courses.find(c => c.id === selectedCourseId);
+                    if (selectedCourse?.createdByProfessorId) {
+                      f("professorId", selectedCourse.createdByProfessorId);
+                    }
+                  }}
                   required
                 >
                   <option value="">Choose course…</option>

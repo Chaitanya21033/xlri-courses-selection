@@ -38,6 +38,7 @@ const adminNav: NavItem[] = [
   { label: "Students", href: "/portal/admin/students", icon: GraduationCap },
   { label: "Professors", href: "/portal/admin/professors", icon: Users },
   { label: "Rounds", href: "/portal/admin/rounds", icon: ClipboardList },
+  { label: "Allocations", href: "/portal/admin/allocations", icon: Trophy },
   { label: "Analytics", href: "/portal/admin/analytics", icon: BarChart3 },
   { label: "Audit Log", href: "/portal/admin/audit", icon: History },
   { label: "Notifications", href: "/portal/admin/notifications", icon: Bell },
@@ -48,7 +49,6 @@ const professorNav: NavItem[] = [
   { label: "Dashboard", href: "/portal/professor", icon: LayoutDashboard },
   { label: "My Courses", href: "/portal/professor/courses", icon: BookMarked },
   { label: "Demand Analytics", href: "/portal/professor/demand", icon: TrendingUp },
-  { label: "Allocations", href: "/portal/professor/allocations", icon: Trophy },
   { label: "Notifications", href: "/portal/professor/notifications", icon: Bell },
 ];
 

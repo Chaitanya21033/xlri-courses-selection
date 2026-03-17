@@ -6,9 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { getCourseStatusColor, getProgrammeLabel } from "@/lib/utils";
-import { Users, BookOpen, TrendingUp, Info } from "lucide-react";
+import { Users, BookOpen, Info } from "lucide-react";
 
 interface CourseCardProps {
   offering: {
@@ -44,10 +43,6 @@ export function CourseCard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
-
-  const demandRatio =
-    offering.seatCap > 0 ? offering._count.bids / offering.seatCap : 0;
-  const seatsLeft = Math.max(0, offering.seatCap - offering._count.bids);
 
   async function handleBid() {
     if (!activeRoundId) return;
@@ -160,46 +155,16 @@ export function CourseCard({
           )}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        {/* Stats — only show seats and MRB, hide bid count from students */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="text-center p-2 rounded-lg bg-slate-50">
             <p className="text-xs text-slate-400">Seats</p>
             <p className="text-sm font-bold text-slate-700">{offering.seatCap}</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-slate-50">
-            <p className="text-xs text-slate-400">Bids</p>
-            <p
-              className={`text-sm font-bold ${
-                offering._count.bids > offering.seatCap
-                  ? "text-red-600"
-                  : "text-slate-700"
-              }`}
-            >
-              {offering._count.bids}
-            </p>
           </div>
           <div className="text-center p-2 rounded-lg bg-indigo-50">
             <p className="text-xs text-indigo-400">MRB</p>
             <p className="text-sm font-bold text-indigo-700">{offering.mrb}</p>
           </div>
-        </div>
-
-        {/* Demand bar */}
-        <div className="mb-3">
-          <div className="flex justify-between text-xs text-slate-400 mb-1">
-            <span>Demand</span>
-            <span>{demandRatio.toFixed(1)}x capacity</span>
-          </div>
-          <Progress
-            value={Math.min(demandRatio * 100, 100)}
-            indicatorClassName={
-              demandRatio > 1.5
-                ? "bg-red-500"
-                : demandRatio > 1
-                ? "bg-amber-400"
-                : "bg-emerald-400"
-            }
-          />
         </div>
 
         {/* Description toggle */}
