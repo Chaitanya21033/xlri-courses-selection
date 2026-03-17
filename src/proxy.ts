@@ -2,6 +2,51 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+/**
+ * In-memory rate limiting for critical API routes.
+ * Adequate for single-instance deployments.
+ * For multi-instance production, swap to Redis.
+ */
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+const bidAttempts = new Map<string, RateLimitEntry>();
+const BID_LIMIT = 60;
+const BID_WINDOW = 60 * 1000;
+
+function getClientIp(req: NextRequest): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const firstIp = forwarded.split(",")[0].trim();
+    if (/^[\d.:a-fA-F]+$/.test(firstIp)) return firstIp;
+  }
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
+function checkLimit(
+  store: Map<string, RateLimitEntry>,
+  key: string,
+  max: number,
+  windowMs: number
+): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const entry = store.get(key);
+
+  if (!entry || entry.resetAt < now) {
+    store.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: max - 1 };
+  }
+
+  if (entry.count >= max) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  entry.count++;
+  return { allowed: true, remaining: max - entry.count };
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -24,6 +69,28 @@ export async function proxy(req: NextRequest) {
   const isPublicPath = publicPrefixes.some(
     (p) => pathname === p || pathname.startsWith(p)
   );
+
+  // Rate limit bidding POST requests
+  if (pathname.startsWith("/api/student/bids") && req.method === "POST") {
+    const ip = getClientIp(req);
+    const { allowed, remaining } = checkLimit(bidAttempts, ip, BID_LIMIT, BID_WINDOW);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many bid requests. Please slow down." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "60",
+            "X-RateLimit-Limit": String(BID_LIMIT),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+    const response = NextResponse.next();
+    response.headers.set("X-RateLimit-Remaining", String(remaining));
+    return response;
+  }
 
   if (isPublicPath) return NextResponse.next();
 
