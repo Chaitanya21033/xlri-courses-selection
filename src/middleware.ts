@@ -11,12 +11,7 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
-const loginAttempts = new Map<string, RateLimitEntry>();
 const bidAttempts = new Map<string, RateLimitEntry>();
-
-// Login: max 10 attempts per 15 minutes per IP
-const LOGIN_LIMIT = 10;
-const LOGIN_WINDOW = 15 * 60 * 1000;
 
 // Bidding: max 60 requests per minute per IP
 const BID_LIMIT = 60;
@@ -57,27 +52,6 @@ export function middleware(req: NextRequest) {
   const { pathname, method } = req.nextUrl;
   const ip = getClientIp(req);
 
-  // Rate limit login attempts (POST to auth endpoint)
-  if (pathname.startsWith("/api/auth") && method === "POST") {
-    const { allowed, remaining } = checkLimit(loginAttempts, ip, LOGIN_LIMIT, LOGIN_WINDOW);
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "Too many login attempts. Please try again later." },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": "900",
-            "X-RateLimit-Limit": String(LOGIN_LIMIT),
-            "X-RateLimit-Remaining": "0",
-          },
-        }
-      );
-    }
-    const response = NextResponse.next();
-    response.headers.set("X-RateLimit-Remaining", String(remaining));
-    return response;
-  }
-
   // Rate limit bidding operations
   if (pathname.startsWith("/api/student/bids") && method === "POST") {
     const { allowed, remaining } = checkLimit(bidAttempts, ip, BID_LIMIT, BID_WINDOW);
@@ -103,5 +77,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/auth/:path*", "/api/student/bids/:path*"],
+  matcher: ["/api/student/bids/:path*"],
 };
