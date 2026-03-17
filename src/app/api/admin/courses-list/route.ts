@@ -9,6 +9,13 @@ export async function GET() {
   }
   const courses = await db.course.findMany({
     where: { isActive: true },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      credits: true,
+      createdByProfessorId: true,
+    },
     orderBy: { code: "asc" },
   });
   return NextResponse.json(courses);

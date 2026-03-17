@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     body = CycleSchema.parse(await req.json());
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
   const term = await db.academicTerm.findUnique({ where: { id: body.termId } });

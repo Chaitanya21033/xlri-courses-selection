@@ -25,7 +25,7 @@ export async function DELETE(req: NextRequest) {
   try {
     body = Schema.parse(await req.json());
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
   const profiles = await db.studentProfile.findMany({

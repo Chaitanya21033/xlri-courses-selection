@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const HASH_SALT = 10;
+  const HASH_SALT = 12;
   const results: {
     name: string; email: string; role: string;
     password: string; employeeId: string; status: string; error?: string;
@@ -140,5 +140,14 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ created, skipped, errors, results }, { status: 200 });
+  // Strip plaintext passwords from the response
+  const sanitizedResults = results.map(({ password, ...rest }) => ({
+    ...rest,
+    passwordGenerated: rest.status === "created",
+  }));
+
+  const response = NextResponse.json({ created, skipped, errors, results: sanitizedResults }, { status: 200 });
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  response.headers.set("Pragma", "no-cache");
+  return response;
 }

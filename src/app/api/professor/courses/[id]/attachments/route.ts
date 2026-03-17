@@ -3,11 +3,29 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import crypto from "crypto";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "course-attachments");
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB per file
 
-// GET — list attachments for a course
+// Allowed MIME types for course attachments
+const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
+
+// GET — list attachments for a course (ownership-verified)
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -17,7 +35,22 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = (session.user as any)?.id;
   const { id: courseId } = await params;
+
+  // Verify the course belongs to this professor
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { professorProfile: true },
+  });
+  if (!user?.professorProfile) {
+    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  }
+
+  const course = await db.course.findUnique({ where: { id: courseId } });
+  if (!course || course.createdByProfessorId !== user.professorProfile.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const attachments = await db.courseAttachment.findMany({
     where: { courseId },
@@ -73,8 +106,16 @@ export async function POST(
       );
     }
 
-    const ext = path.extname(file.name);
-    const safeName = `${courseId}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    // Validate MIME type
+    if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: `File type "${file.type}" is not allowed` },
+        { status: 400 }
+      );
+    }
+
+    const ext = path.extname(file.name).replace(/[^a-zA-Z0-9.]/g, "");
+    const safeName = `${courseId}-${crypto.randomUUID()}${ext}`;
     const filePath = path.join(UPLOAD_DIR, safeName);
     const fileUrl = `/uploads/course-attachments/${safeName}`;
 

@@ -12,7 +12,11 @@ import { BookOpen, Lock, Mail, AlertCircle, Eye, EyeOff } from "lucide-react";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/portal";
+  // Validate callbackUrl to prevent open redirect attacks
+  const rawCallback = searchParams.get("callbackUrl") ?? "/portal";
+  const callbackUrl = rawCallback.startsWith("/") && !rawCallback.startsWith("//")
+    ? rawCallback
+    : "/portal";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,12 +45,16 @@ function LoginForm() {
     }
   }
 
-  const demoAccounts = [
-    { label: "Admin", email: "admin@xlri.ac.in", password: "demo1234" },
-    { label: "Professor", email: "prof.sharma@xlri.ac.in", password: "demo1234" },
-    { label: "BM Student", email: "bm001@xlri.ac.in", password: "demo1234" },
-    { label: "HRM Student", email: "hrm001@xlri.ac.in", password: "demo1234" },
-  ];
+  // Demo accounts only shown in development — never expose credentials in production
+  const isDev = process.env.NODE_ENV === "development";
+  const demoAccounts = isDev
+    ? [
+        { label: "Admin", email: "admin@xlri.ac.in", password: "demo1234" },
+        { label: "Professor", email: "prof.sharma@xlri.ac.in", password: "demo1234" },
+        { label: "BM Student", email: "bm001@xlri.ac.in", password: "demo1234" },
+        { label: "HRM Student", email: "hrm001@xlri.ac.in", password: "demo1234" },
+      ]
+    : [];
 
   return (
     <div className="max-w-sm w-full mx-auto">
@@ -123,10 +131,10 @@ function LoginForm() {
         </Button>
       </form>
 
-      {/* Demo accounts */}
-      <div className="mt-8">
+      {/* Demo accounts — development only */}
+      {demoAccounts.length > 0 && <div className="mt-8">
         <p className="text-xs text-slate-400 mb-3 font-medium uppercase tracking-wide">
-          Demo Accounts
+          Demo Accounts (Dev Only)
         </p>
         <div className="grid grid-cols-2 gap-2">
           {demoAccounts.map((acc) => (
@@ -147,7 +155,7 @@ function LoginForm() {
         <p className="text-xs text-slate-400 mt-2">
           All demo accounts use password: <code className="bg-slate-100 px-1 rounded">demo1234</code>
         </p>
-      </div>
+      </div>}
 
       <p className="mt-6 text-xs text-slate-400 text-center">
         Facing login issues?{" "}

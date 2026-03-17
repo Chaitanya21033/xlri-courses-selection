@@ -4,12 +4,13 @@ import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
 import { AUDIT_ACTION } from "@/lib/constants";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
-function generatePassword(length = 10): string {
-  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-  return Array.from({ length }, () =>
-    chars[Math.floor(Math.random() * chars.length)]
-  ).join("");
+function generatePassword(length = 12): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+  return Array.from(crypto.randomBytes(length))
+    .map((b) => chars[b % chars.length])
+    .join("");
 }
 
 /**
@@ -34,8 +35,8 @@ export async function POST(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const newPassword = generatePassword(12);
-  const hash = await bcrypt.hash(newPassword, 10);
+  const newPassword = generatePassword(14);
+  const hash = await bcrypt.hash(newPassword, 12);
 
   await db.user.update({
     where: { id: userId },
@@ -51,5 +52,14 @@ export async function POST(
     ipAddress: req.headers.get("x-forwarded-for") ?? undefined,
   });
 
-  return NextResponse.json({ success: true, newPassword });
+  // Return the temporary password so admin can share it securely out-of-band.
+  // Response includes no-cache headers to prevent password leakage via caches.
+  const response = NextResponse.json({
+    success: true,
+    newPassword,
+    warning: "Communicate this password securely to the user. It will not be stored or shown again.",
+  });
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  response.headers.set("Pragma", "no-cache");
+  return response;
 }

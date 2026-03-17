@@ -33,11 +33,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!user) {
-            console.warn("[auth] authorize: no user found for", credentials.email);
+            // Generic log — do not reveal whether user exists
+            console.warn("[auth] authorize: login failed");
             return null;
           }
           if (!user.isActive) {
-            console.warn("[auth] authorize: user is inactive:", credentials.email);
+            console.warn("[auth] authorize: login failed (inactive account)");
             return null;
           }
 
@@ -46,7 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             user.passwordHash
           );
           if (!valid) {
-            console.warn("[auth] authorize: wrong password for", credentials.email);
+            console.warn("[auth] authorize: login failed (invalid credentials)");
             return null;
           }
 

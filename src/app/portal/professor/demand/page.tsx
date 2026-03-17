@@ -118,7 +118,8 @@ export default async function ProfessorDemandPage() {
               </CardHeader>
               <CardContent>
                 {/* Key stats */}
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+                {/* Key stats — bid points hidden from professors */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
                   <div className="p-3 bg-slate-50 rounded-lg text-center">
                     <p className="text-xs text-slate-400">Seats</p>
                     <p className="text-xl font-bold text-slate-700">{o.seatCap}</p>
@@ -128,14 +129,6 @@ export default async function ProfessorDemandPage() {
                     <p className={`text-xl font-bold ${oversubscribed ? "text-red-700" : "text-indigo-700"}`}>
                       {activeBids.length}
                     </p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg text-center">
-                    <p className="text-xs text-slate-400">Avg Bid</p>
-                    <p className="text-xl font-bold text-slate-700">{avgPoints}</p>
-                  </div>
-                  <div className="p-3 bg-emerald-50 rounded-lg text-center">
-                    <p className="text-xs text-emerald-400">Highest</p>
-                    <p className="text-xl font-bold text-emerald-700">{maxBid}</p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg text-center">
                     <p className="text-xs text-slate-400">MRB</p>
@@ -179,15 +172,14 @@ export default async function ProfessorDemandPage() {
                       </div>
                     </div>
 
-                    {/* Top bidders */}
+                    {/* Bidders list — points hidden from professors */}
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                        Top Bidders
+                        Bidding Students
                       </p>
                       <div className="space-y-1.5">
                         {activeBids
-                          .sort((a, b) => b.points - a.points)
-                          .slice(0, 5)
+                          .slice(0, 10)
                           .map((bid, idx) => (
                             <div
                               key={bid.id}
@@ -204,12 +196,12 @@ export default async function ProfessorDemandPage() {
                                   {bid.user.studentProfile?.programme}
                                 </span>
                               </div>
-                              <span className="font-bold text-indigo-700">
-                                {bid.points} pts
-                              </span>
                             </div>
                           ))}
                       </div>
+                      <p className="text-xs text-slate-400 mt-2 italic">
+                        Individual bid points are not visible to faculty.
+                      </p>
                     </div>
                   </div>
                 )}

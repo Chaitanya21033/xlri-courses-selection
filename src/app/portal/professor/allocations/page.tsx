@@ -12,6 +12,9 @@ export default async function ProfessorAllocationsPage() {
     redirect("/portal");
   }
 
+  // Bid allocation viewing is restricted to admin only
+  redirect("/portal/professor");
+
   const userId = (session.user as any)?.id;
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -137,9 +140,6 @@ export default async function ProfessorAllocationsPage() {
                         <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                           Programme
                         </th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                          Points Paid
-                        </th>
                         <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                           Round
                         </th>
@@ -178,9 +178,6 @@ export default async function ProfessorAllocationsPage() {
                             >
                               {alloc.student.programme}
                             </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono font-semibold text-indigo-700">
-                            {alloc.finalPoints}
                           </td>
                           <td className="px-4 py-3 text-xs text-slate-500">
                             {alloc.round.name}

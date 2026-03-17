@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getCourseStatusColor, getProgrammeLabel } from "@/lib/utils";
 import Link from "next/link";
 import { Plus, BookMarked, AlertTriangle } from "lucide-react";
+import { DeleteCourseButton } from "./delete-course-button";
 
 export default async function AdminCoursesPage() {
   const session = await auth();
@@ -153,12 +154,19 @@ export default async function AdminCoursesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Link
-                          href={`/portal/admin/courses/${o.id}`}
-                          className="text-xs text-indigo-600 hover:underline"
-                        >
-                          Edit
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href={`/portal/admin/courses/${o.id}`}
+                            className="text-xs text-indigo-600 hover:underline"
+                          >
+                            Edit
+                          </Link>
+                          <DeleteCourseButton
+                            offeringId={o.id}
+                            courseTitle={o.course.title}
+                            status={o.status}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))
