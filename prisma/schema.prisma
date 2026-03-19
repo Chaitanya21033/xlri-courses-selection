@@ -167,8 +167,9 @@ model Course {
   defaultEligibility   String?  @default("BOTH") // BM | HRM | GMP | BM_HRM | BM_GMP | HRM_GMP | ALL
   defaultSeatCap       Int?     @default(40)
   // Default tie-break preference (applied when admin links to a cycle)
-  defaultTieBreakMethod   String?  // TieBreakMethod
+  defaultTieBreakMethod     String?  // TieBreakMethod
   defaultTieBreakPrereqCode String?
+  defaultSopWordLimit       Int?     // used when defaultTieBreakMethod = SOP_SCORE
   // Ownership
   createdByProfessorId String?  // ProfessorProfile.id of the professor who created this
   isActive             Boolean  @default(true)

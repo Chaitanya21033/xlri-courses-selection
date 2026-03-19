@@ -2,13 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { SOP_WORD_LIMIT_MIN, SOP_WORD_LIMIT_MAX } from "@/lib/constants";
 
-const TIE_BREAK_METHODS = ["CQPI_DESC", "GRADE_DESC", "COMPOSITE_RANK", "LOTTERY", "MANUAL_RANK"] as const;
+const TIE_BREAK_METHODS = [
+  "CQPI_DESC",
+  "GRADE_DESC",
+  "COMPOSITE_RANK",
+  "LOTTERY",
+  "MANUAL_RANK",
+  "SOP_SCORE",
+] as const;
 
 const PatchSchema = z.object({
   defaultTieBreakMethod: z.enum(TIE_BREAK_METHODS).nullable().optional(),
   defaultTieBreakPrereqCode: z.string().nullable().optional(),
-});
+  defaultSopWordLimit: z
+    .number()
+    .int()
+    .min(SOP_WORD_LIMIT_MIN)
+    .max(SOP_WORD_LIMIT_MAX)
+    .nullable()
+    .optional(),
+}).refine(
+  (data) =>
+    data.defaultTieBreakMethod !== "SOP_SCORE" || data.defaultSopWordLimit != null,
+  { message: "defaultSopWordLimit is required when method is SOP_SCORE", path: ["defaultSopWordLimit"] }
+);
 
 // PATCH — update tie-break preference (and other Course-level defaults) on a proposal
 export async function PATCH(
@@ -40,7 +59,7 @@ export async function PATCH(
   try {
     body = PatchSchema.parse(await req.json());
   } catch (e: any) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request", details: e.errors }, { status: 400 });
   }
 
   const updated = await db.course.update({
@@ -48,6 +67,11 @@ export async function PATCH(
     data: {
       defaultTieBreakMethod: body.defaultTieBreakMethod ?? undefined,
       defaultTieBreakPrereqCode: body.defaultTieBreakPrereqCode ?? undefined,
+      // Store SOP word limit; clear it if method is not SOP_SCORE
+      defaultSopWordLimit:
+        body.defaultTieBreakMethod === "SOP_SCORE"
+          ? (body.defaultSopWordLimit ?? undefined)
+          : null,
     },
   });
 
