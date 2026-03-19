@@ -30,7 +30,7 @@ export default async function StudentCatalogPage() {
     },
   });
 
-  // Get eligible offerings
+  // Get eligible offerings (include SOP fields so course card can show SOP textarea)
   const offerings = await db.courseOffering.findMany({
     where: {
       status: { in: ["PUBLISHED", "BIDDING_OPEN"] },
@@ -45,13 +45,13 @@ export default async function StudentCatalogPage() {
     orderBy: [{ course: { title: "asc" } }],
   });
 
-  // Get student's existing bids
+  // Get student's existing bids (include SOP fields for SOP-based courses)
   const existingBids = await db.bid.findMany({
     where: {
       userId,
       status: { in: ["ACTIVE", "WINNING", "LOSING"] },
     },
-    select: { offeringId: true, points: true, status: true },
+    select: { offeringId: true, points: true, status: true, sopText: true, sopScore: true },
   });
 
   const bidMap = new Map(existingBids.map((b) => [b.offeringId, b]));

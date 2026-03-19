@@ -37,6 +37,8 @@ export interface BidRecord {
   prerequisiteGrade?: number;
   compositeRank?: number;
   manualRank?: number;
+  // SOP-based intake fields
+  sopScore?: number | null;    // professor-assigned score 0–100 (null = not yet scored)
 }
 
 export interface AllocationDecision {
@@ -181,11 +183,54 @@ export function resolveTieBreak(
 }
 
 /**
+ * Rank applicants for an SOP-based course.
+ *
+ * Ranking rule: descending SOP score; unscored applicants (sopScore=null)
+ * are treated as score=0 and rank last.
+ * Tie-breaking fallback: ascending rollNumber (same convention used in
+ * CQPI_DESC and other point-based tie-break methods).
+ *
+ * Returns AllocationDecision[] with top seatCap as WINNING and the rest as LOSING.
+ */
+function allocateSopCourse(
+  bids: BidRecord[],
+  offeringId: string,
+  seatCap: number
+): AllocationDecision[] {
+  if (bids.length === 0) return [];
+
+  // Sort: highest SOP score first; null scores treated as 0; ties broken by rollNumber asc
+  const sorted = [...bids].sort((a, b) => {
+    const scoreA = a.sopScore ?? 0;
+    const scoreB = b.sopScore ?? 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return a.rollNumber.localeCompare(b.rollNumber);
+  });
+
+  const decisions: AllocationDecision[] = sorted.map((b, idx) => ({
+    studentProfileId: b.studentProfileId,
+    userId: b.userId,
+    offeringId,
+    status: idx < seatCap ? "WINNING" : "LOSING",
+    // For SOP courses finalPoints is 0 — bid points are not used in ranking.
+    // The SOP score is stored on the Bid record itself.
+    finalPoints: 0,
+    tieBroken: false,
+  }));
+
+  return decisions;
+}
+
+/**
  * Full allocation run for a single course offering.
  *
  * Supports quota relaxation: if quotaRelaxed=false and QuotaRules exist,
  * each programme batch is capped at maxSeats for Round 1.
  * If quotaRelaxed=true (Round 2+), quota limits are ignored.
+ *
+ * For SOP-based courses (requiresSop=true), ranking is determined by
+ * descending SOP score instead of bid points. Tie-break policy is not
+ * required for SOP courses; ties in SOP score use rollNumber as fallback.
  *
  * Returns the complete list of AllocationDecision records.
  */
@@ -204,7 +249,9 @@ export async function allocateCourse(
   });
 
   if (!offering) throw new Error(`Offering ${offeringId} not found`);
-  if (!offering.tieBreakPolicy) {
+
+  // SOP courses don't require a tie-break policy; points-based courses do.
+  if (!offering.requiresSop && !offering.tieBreakPolicy) {
     throw new Error(
       `Course ${offering.course.code} cannot be allocated: no tie-break policy defined`
     );
@@ -246,8 +293,14 @@ export async function allocateCourse(
       points: b.points,
       cqpi: sp.cqpi,
       prerequisiteGrade: preqGrade,
+      sopScore: (b as any).sopScore ?? null,
     };
   });
+
+  // For SOP-based courses, delegate to the SOP allocation path.
+  if (offering.requiresSop) {
+    return allocateSopCourse(bids, offeringId, offering.seatCap);
+  }
 
   // Determine effective seat cap considering quota rules
   let effectiveSeatCap = offering.seatCap;
@@ -299,11 +352,13 @@ export async function allocateCourse(
       tiedAtBoundary = atCutoff;
       clearLosers = belowCutoff;
 
+      // tieBreakPolicy is guaranteed non-null here: non-SOP courses throw early if missing
+      const policy = offering.tieBreakPolicy!;
       const ranked = resolveTieBreak(
         tiedAtBoundary,
-        offering.tieBreakPolicy.method,
-        offering.tieBreakPolicy.prerequisiteCourseCode,
-        offering.tieBreakPolicy.manualRankJson,
+        policy.method,
+        policy.prerequisiteCourseCode,
+        policy.manualRankJson,
         parseInt(offeringId.slice(-4), 36)
       );
 
@@ -418,7 +473,7 @@ export async function validateBid(
   // 1. Check offering exists and is in a biddable state
   const offering = await db.courseOffering.findUnique({
     where: { id: offeringId },
-    include: { cycle: true },
+    include: { cycle: true, course: { select: { credits: true } } },
   });
   if (!offering) {
     return { valid: false, reason: "Course offering not found." };

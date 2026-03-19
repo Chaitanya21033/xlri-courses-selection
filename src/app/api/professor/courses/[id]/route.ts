@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
-import { AUDIT_ACTION } from "@/lib/constants";
+import { AUDIT_ACTION, SOP_CHAR_LIMIT_MIN, SOP_CHAR_LIMIT_MAX } from "@/lib/constants";
 import { z } from "zod";
 
 const UpdateSchema = z.object({
@@ -15,7 +15,16 @@ const UpdateSchema = z.object({
   seatCap: z.number().int().min(1).optional(),
   eligibility: z.enum(["BM", "HRM", "BOTH"]).optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
-});
+  requiresSop: z.boolean().optional(),
+  sopCharacterLimit: z.number().int().min(SOP_CHAR_LIMIT_MIN).max(SOP_CHAR_LIMIT_MAX).nullable().optional(),
+}).refine(
+  (data) => {
+    // If requiresSop is being set to true, sopCharacterLimit must be provided
+    if (data.requiresSop === true && data.sopCharacterLimit == null) return false;
+    return true;
+  },
+  { message: "sopCharacterLimit is required when requiresSop is true", path: ["sopCharacterLimit"] }
+);
 
 export async function GET(
   _req: NextRequest,
@@ -70,13 +79,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { description, prerequisites, learningGoals, scheduleNotes, ...offeringFields } = body;
+  const { description, prerequisites, learningGoals, scheduleNotes, requiresSop, sopCharacterLimit, ...offeringFields } = body;
 
   if (description !== undefined || prerequisites !== undefined || learningGoals !== undefined || scheduleNotes !== undefined) {
     await db.course.update({ where: { id: offering.courseId }, data: { description, prerequisites, learningGoals, scheduleNotes } });
   }
 
-  const updated = await db.courseOffering.update({ where: { id }, data: offeringFields, include: { course: true, tieBreakPolicy: true } });
+  // Build offering update data, including SOP fields when provided
+  const offeringUpdateData: Record<string, unknown> = { ...offeringFields };
+  if (requiresSop !== undefined) offeringUpdateData.requiresSop = requiresSop;
+  if (sopCharacterLimit !== undefined) offeringUpdateData.sopCharacterLimit = sopCharacterLimit;
+  // If disabling SOP, clear the character limit too
+  if (requiresSop === false) offeringUpdateData.sopCharacterLimit = null;
+
+  const updated = await db.courseOffering.update({ where: { id }, data: offeringUpdateData, include: { course: true, tieBreakPolicy: true } });
 
   await createAuditLog({ userId, action: AUDIT_ACTION.COURSE_UPDATED, entityType: "CourseOffering", entityId: id, before: offering, after: updated });
   return NextResponse.json(updated);
