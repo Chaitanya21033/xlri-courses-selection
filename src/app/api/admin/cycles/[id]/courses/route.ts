@@ -65,7 +65,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // Verify course exists
+  // Verify course exists (include tie-break defaults set by professor)
   const course = await db.course.findUnique({ where: { id: body.courseId } });
   if (!course) {
     return NextResponse.json({ error: "Course not found" }, { status: 404 });
@@ -88,6 +88,9 @@ export async function POST(
     );
   }
 
+  // Determine SOP fields from professor's course defaults
+  const autoSop = course.defaultTieBreakMethod === "SOP_SCORE";
+
   const offering = await db.courseOffering.create({
     data: {
       courseId: body.courseId,
@@ -98,13 +101,28 @@ export async function POST(
       reservedSeatsRound1: body.reservedSeatsRound1,
       mrb: body.mrb,
       additionalNotes: body.additionalNotes ?? null,
-      status: "DRAFT",
+      // Feature 2: open bidding immediately so students can see and bid on the course
+      status: "BIDDING_OPEN",
+      // Feature 1: sync SOP settings from professor's course defaults
+      requiresSop: autoSop,
+      sopWordLimit: autoSop ? (course.defaultSopWordLimit ?? null) : null,
     },
     include: {
       course: true,
       professor: { include: { user: { select: { name: true } } } },
     },
   });
+
+  // Feature 1: auto-apply the professor's default tie-break policy if one is defined
+  if (course.defaultTieBreakMethod) {
+    await db.tieBreakPolicy.create({
+      data: {
+        offeringId: offering.id,
+        method: course.defaultTieBreakMethod,
+        prerequisiteCourseCode: course.defaultTieBreakPrereqCode ?? null,
+      },
+    });
+  }
 
   return NextResponse.json(offering, { status: 201 });
 }
