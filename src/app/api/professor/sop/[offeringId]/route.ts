@@ -99,7 +99,7 @@ export async function GET(
     offeringId,
     courseCode: offering.course.code,
     courseTitle: offering.course.title,
-    sopCharacterLimit: offering.sopCharacterLimit,
+    sopWordLimit: offering.sopWordLimit,
     applicants: bids.map((b) => ({
       bidId: b.id,
       userId: b.userId,

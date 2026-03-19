@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   // Fetch offering to check SOP requirements before business validation
   const offeringForSop = await db.courseOffering.findUnique({
     where: { id: offeringId },
-    select: { requiresSop: true, sopCharacterLimit: true },
+    select: { requiresSop: true, sopWordLimit: true },
   });
 
   if (offeringForSop?.requiresSop) {
@@ -44,9 +44,10 @@ export async function POST(req: NextRequest) {
         { status: 422 }
       );
     }
-    if (offeringForSop.sopCharacterLimit && trimmed.length > offeringForSop.sopCharacterLimit) {
+    const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+    if (offeringForSop.sopWordLimit && wordCount > offeringForSop.sopWordLimit) {
       return NextResponse.json(
-        { error: `SOP exceeds the ${offeringForSop.sopCharacterLimit}-character limit.` },
+        { error: `SOP exceeds the ${offeringForSop.sopWordLimit}-word limit (submitted: ${wordCount} words).` },
         { status: 422 }
       );
     }

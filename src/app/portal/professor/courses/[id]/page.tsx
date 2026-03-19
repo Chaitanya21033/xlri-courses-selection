@@ -103,7 +103,7 @@ export default async function ProfessorCourseDetailPage({
             <p className="font-semibold text-indigo-800">SOP-Based Intake Enabled</p>
             <p className="text-sm text-indigo-700 mt-0.5">
               Students must submit a Statement of Purpose. Ranking is based on your SOP scores.
-              Character limit: {offering.sopCharacterLimit ?? "—"} characters.
+              Word limit: {offering.sopWordLimit ?? "—"} words.
             </p>
           </div>
           <Link href={`/portal/professor/courses/${id}/sop-review`}>

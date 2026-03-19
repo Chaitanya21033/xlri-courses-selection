@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditLog } from "@/lib/audit";
-import { AUDIT_ACTION, SOP_CHAR_LIMIT_MIN, SOP_CHAR_LIMIT_MAX } from "@/lib/constants";
+import { AUDIT_ACTION, SOP_WORD_LIMIT_MIN, SOP_WORD_LIMIT_MAX } from "@/lib/constants";
 import { z } from "zod";
 
 const UpdateSchema = z.object({
@@ -16,14 +16,14 @@ const UpdateSchema = z.object({
   eligibility: z.enum(["BM", "HRM", "BOTH"]).optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
   requiresSop: z.boolean().optional(),
-  sopCharacterLimit: z.number().int().min(SOP_CHAR_LIMIT_MIN).max(SOP_CHAR_LIMIT_MAX).nullable().optional(),
+  sopWordLimit: z.number().int().min(SOP_WORD_LIMIT_MIN).max(SOP_WORD_LIMIT_MAX).nullable().optional(),
 }).refine(
   (data) => {
-    // If requiresSop is being set to true, sopCharacterLimit must be provided
-    if (data.requiresSop === true && data.sopCharacterLimit == null) return false;
+    // If requiresSop is being set to true, sopWordLimit must be provided
+    if (data.requiresSop === true && data.sopWordLimit == null) return false;
     return true;
   },
-  { message: "sopCharacterLimit is required when requiresSop is true", path: ["sopCharacterLimit"] }
+  { message: "sopWordLimit is required when requiresSop is true", path: ["sopWordLimit"] }
 );
 
 export async function GET(
@@ -79,7 +79,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { description, prerequisites, learningGoals, scheduleNotes, requiresSop, sopCharacterLimit, ...offeringFields } = body;
+  const { description, prerequisites, learningGoals, scheduleNotes, requiresSop, sopWordLimit, ...offeringFields } = body;
 
   if (description !== undefined || prerequisites !== undefined || learningGoals !== undefined || scheduleNotes !== undefined) {
     await db.course.update({ where: { id: offering.courseId }, data: { description, prerequisites, learningGoals, scheduleNotes } });
@@ -88,9 +88,9 @@ export async function PATCH(
   // Build offering update data, including SOP fields when provided
   const offeringUpdateData: Record<string, unknown> = { ...offeringFields };
   if (requiresSop !== undefined) offeringUpdateData.requiresSop = requiresSop;
-  if (sopCharacterLimit !== undefined) offeringUpdateData.sopCharacterLimit = sopCharacterLimit;
-  // If disabling SOP, clear the character limit too
-  if (requiresSop === false) offeringUpdateData.sopCharacterLimit = null;
+  if (sopWordLimit !== undefined) offeringUpdateData.sopWordLimit = sopWordLimit;
+  // If disabling SOP, clear the word limit too
+  if (requiresSop === false) offeringUpdateData.sopWordLimit = null;
 
   const updated = await db.courseOffering.update({ where: { id }, data: offeringUpdateData, include: { course: true, tieBreakPolicy: true } });
 

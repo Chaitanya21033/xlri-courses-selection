@@ -209,7 +209,7 @@ model CourseOffering {
   outlineFileName     String?
   // SOP-based intake fields
   requiresSop         Boolean          @default(false)
-  sopCharacterLimit   Int?             // mandatory when requiresSop=true; max chars for SOP text
+  sopWordLimit        Int?             // mandatory when requiresSop=true; max word count for SOP text
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 

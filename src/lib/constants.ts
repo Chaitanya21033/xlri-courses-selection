@@ -89,6 +89,6 @@ export const MAX_COURSES_PER_STUDENT = 8;
 export const MIN_CREDITS = 6;
 export const MAX_CREDITS = 20;
 
-// SOP configuration bounds
-export const SOP_CHAR_LIMIT_MIN = 100;   // floor: at least 100 chars allowed
-export const SOP_CHAR_LIMIT_MAX = 5000;  // ceiling: max 5000 chars allowed
+// SOP configuration bounds (word-based)
+export const SOP_WORD_LIMIT_MIN = 50;    // floor: at least 50 words required
+export const SOP_WORD_LIMIT_MAX = 1000;  // ceiling: max 1000 words allowed

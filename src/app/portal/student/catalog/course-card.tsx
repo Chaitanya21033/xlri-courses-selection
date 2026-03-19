@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { getCourseStatusColor, getProgrammeLabel } from "@/lib/utils";
+import { getCourseStatusColor, getProgrammeLabel, countWords } from "@/lib/utils";
 import { Users, BookOpen, Info, FileText } from "lucide-react";
 
 interface CourseCardProps {
@@ -18,7 +18,7 @@ interface CourseCardProps {
     status: string;
     mrb: number;
     requiresSop: boolean;
-    sopCharacterLimit: number | null;
+    sopWordLimit: number | null;
     course: { title: string; code: string; credits: number; description?: string | null };
     professor: { user: { name: string } };
     tieBreakPolicy: { method: string } | null;
@@ -48,8 +48,9 @@ export function CourseCard({
   const [error, setError] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  const sopCharLimit = offering.sopCharacterLimit ?? 0;
-  const sopRemaining = sopCharLimit - sopText.length;
+  const sopLimit = offering.sopWordLimit ?? 0;
+  const sopWordCount = countWords(sopText);
+  const sopOverLimit = sopLimit > 0 && sopWordCount > sopLimit;
 
   async function handleBid() {
     if (!activeRoundId) return;
@@ -64,8 +65,8 @@ export function CourseCard({
         setLoading(false);
         return;
       }
-      if (sopCharLimit && trimmed.length > sopCharLimit) {
-        setError(`SOP exceeds the ${sopCharLimit}-character limit.`);
+      if (sopLimit && sopWordCount > sopLimit) {
+        setError(`SOP exceeds the ${sopLimit}-word limit (${sopWordCount} words).`);
         setLoading(false);
         return;
       }
@@ -234,7 +235,6 @@ export function CourseCard({
                 </div>
                 <Textarea
                   rows={4}
-                  maxLength={sopCharLimit || undefined}
                   value={sopText}
                   onChange={(e) => setSopText(e.target.value)}
                   placeholder="Write your statement of purpose here…"
@@ -242,9 +242,9 @@ export function CourseCard({
                 />
                 <div className="flex justify-between text-xs text-slate-400">
                   <span>Selection is based on SOP score, not bid points.</span>
-                  {sopCharLimit > 0 && (
-                    <span className={sopRemaining < 0 ? "text-red-500 font-semibold" : ""}>
-                      {sopText.length}/{sopCharLimit}
+                  {sopLimit > 0 && (
+                    <span className={sopOverLimit ? "text-red-500 font-semibold" : ""}>
+                      {sopWordCount} / {sopLimit} words
                     </span>
                   )}
                 </div>

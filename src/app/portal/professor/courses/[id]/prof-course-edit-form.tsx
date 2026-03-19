@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, FileText } from "lucide-react";
-import { SOP_CHAR_LIMIT_MIN, SOP_CHAR_LIMIT_MAX } from "@/lib/constants";
+import { SOP_WORD_LIMIT_MIN, SOP_WORD_LIMIT_MAX } from "@/lib/constants";
 
 interface Offering {
   id: string;
@@ -17,7 +17,7 @@ interface Offering {
   additionalNotes: string | null;
   courseInstructions: string | null;
   requiresSop: boolean;
-  sopCharacterLimit: number | null;
+  sopWordLimit: number | null;
   course: { description: string | null; prerequisites: string | null; learningGoals: string | null; scheduleNotes: string | null; };
 }
 
@@ -38,7 +38,7 @@ export function ProfessorCourseEditForm({ offering }: { offering: Offering }) {
     seatCap: offering.seatCap,
     status: offering.status,
     requiresSop: offering.requiresSop,
-    sopCharacterLimit: offering.sopCharacterLimit ?? 1000,
+    sopWordLimit: offering.sopWordLimit ?? 300,
   });
 
   async function handleSave(e: React.FormEvent) {
@@ -46,9 +46,9 @@ export function ProfessorCourseEditForm({ offering }: { offering: Offering }) {
     setLoading(true); setError(null); setSaved(false);
 
     if (form.requiresSop) {
-      const limit = Number(form.sopCharacterLimit);
-      if (!limit || limit < SOP_CHAR_LIMIT_MIN || limit > SOP_CHAR_LIMIT_MAX) {
-        setError(`SOP character limit must be between ${SOP_CHAR_LIMIT_MIN} and ${SOP_CHAR_LIMIT_MAX}.`);
+      const limit = Number(form.sopWordLimit);
+      if (!limit || limit < SOP_WORD_LIMIT_MIN || limit > SOP_WORD_LIMIT_MAX) {
+        setError(`SOP word limit must be between ${SOP_WORD_LIMIT_MIN} and ${SOP_WORD_LIMIT_MAX}.`);
         setLoading(false);
         return;
       }
@@ -59,7 +59,7 @@ export function ProfessorCourseEditForm({ offering }: { offering: Offering }) {
         ...form,
         seatCap: Number(form.seatCap),
         requiresSop: form.requiresSop,
-        sopCharacterLimit: form.requiresSop ? Number(form.sopCharacterLimit) : null,
+        sopWordLimit: form.requiresSop ? Number(form.sopWordLimit) : null,
       };
       const res = await fetch(`/api/professor/courses/${offering.id}`, {
         method: "PATCH",
@@ -144,16 +144,16 @@ export function ProfessorCourseEditForm({ offering }: { offering: Offering }) {
         </div>
         {form.requiresSop && (
           <div className="space-y-1.5">
-            <Label>SOP Character Limit <span className="text-slate-400 font-normal">({SOP_CHAR_LIMIT_MIN}–{SOP_CHAR_LIMIT_MAX})</span></Label>
+            <Label>SOP Word Limit <span className="text-slate-400 font-normal">({SOP_WORD_LIMIT_MIN}–{SOP_WORD_LIMIT_MAX} words)</span></Label>
             <Input
               type="number"
-              min={SOP_CHAR_LIMIT_MIN}
-              max={SOP_CHAR_LIMIT_MAX}
-              value={form.sopCharacterLimit}
-              onChange={e => setForm(f => ({ ...f, sopCharacterLimit: parseInt(e.target.value) || SOP_CHAR_LIMIT_MIN }))}
+              min={SOP_WORD_LIMIT_MIN}
+              max={SOP_WORD_LIMIT_MAX}
+              value={form.sopWordLimit}
+              onChange={e => setForm(f => ({ ...f, sopWordLimit: parseInt(e.target.value) || SOP_WORD_LIMIT_MIN }))}
               className="max-w-xs"
             />
-            <p className="text-xs text-slate-500">Students cannot submit an SOP longer than this limit.</p>
+            <p className="text-xs text-slate-500">Students cannot submit an SOP longer than this word count.</p>
           </div>
         )}
       </div>

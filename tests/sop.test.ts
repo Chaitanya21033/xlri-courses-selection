@@ -178,17 +178,28 @@ describe("SOP allocation — finalPoints behavior", () => {
 
 // ─── SOP Validation Logic ─────────────────────────────────────────────────────
 
-describe("SOP validation — character limit", () => {
-  it("accepts SOP within character limit", () => {
-    const sopText = "a".repeat(500);
-    const limit = 1000;
-    expect(sopText.trim().length <= limit).toBe(true);
+/** Inline word-counter matching the server + client implementation. */
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+describe("SOP validation — word limit", () => {
+  it("accepts SOP within word limit", () => {
+    const sopText = Array(200).fill("word").join(" "); // 200 words
+    const limit = 300;
+    expect(countWords(sopText) <= limit).toBe(true);
   });
 
-  it("rejects SOP exceeding character limit", () => {
-    const sopText = "a".repeat(1001);
-    const limit = 1000;
-    expect(sopText.trim().length > limit).toBe(true);
+  it("rejects SOP exceeding word limit", () => {
+    const sopText = Array(301).fill("word").join(" "); // 301 words
+    const limit = 300;
+    expect(countWords(sopText) > limit).toBe(true);
+  });
+
+  it("accepts SOP exactly at the word limit", () => {
+    const sopText = Array(300).fill("word").join(" "); // exactly 300 words
+    const limit = 300;
+    expect(countWords(sopText) <= limit).toBe(true);
   });
 
   it("rejects empty/whitespace-only SOP", () => {
@@ -196,6 +207,12 @@ describe("SOP validation — character limit", () => {
     expect(isEmpty("")).toBe(true);
     expect(isEmpty("   \n\t  ")).toBe(true);
     expect(isEmpty("valid content")).toBe(false);
+  });
+
+  it("counts hyphenated and punctuated words correctly", () => {
+    // Each whitespace-separated token is one word
+    expect(countWords("well-being self-aware")).toBe(2);
+    expect(countWords("Hello, world!")).toBe(2);
   });
 });
 
