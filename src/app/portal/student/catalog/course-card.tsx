@@ -6,8 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getCourseStatusColor, getProgrammeLabel } from "@/lib/utils";
-import { Users, BookOpen, Info } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { getCourseStatusColor, getProgrammeLabel, countWords } from "@/lib/utils";
+import { Users, BookOpen, Info, FileText } from "lucide-react";
 
 interface CourseCardProps {
   offering: {
@@ -16,12 +17,14 @@ interface CourseCardProps {
     seatCap: number;
     status: string;
     mrb: number;
+    requiresSop: boolean;
+    sopWordLimit: number | null;
     course: { title: string; code: string; credits: number; description?: string | null };
     professor: { user: { name: string } };
     tieBreakPolicy: { method: string } | null;
     _count: { bids: number };
   };
-  existingBid?: { points: number; status: string };
+  existingBid?: { points: number; status: string; sopText?: string | null; sopScore?: number | null };
   isRoundOpen: boolean;
   activeRoundId?: string;
   availablePoints: number;
@@ -40,14 +43,34 @@ export function CourseCard({
   const [bidPoints, setBidPoints] = useState<number>(
     existingBid?.points ?? (minBidRequired ? 1 : 0)
   );
+  const [sopText, setSopText] = useState<string>(existingBid?.sopText ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+
+  const sopLimit = offering.sopWordLimit ?? 0;
+  const sopWordCount = countWords(sopText);
+  const sopOverLimit = sopLimit > 0 && sopWordCount > sopLimit;
 
   async function handleBid() {
     if (!activeRoundId) return;
     setLoading(true);
     setError(null);
+
+    // Client-side SOP validation before sending
+    if (offering.requiresSop) {
+      const trimmed = sopText.trim();
+      if (!trimmed) {
+        setError("A Statement of Purpose (SOP) is required for this course.");
+        setLoading(false);
+        return;
+      }
+      if (sopLimit && sopWordCount > sopLimit) {
+        setError(`SOP exceeds the ${sopLimit}-word limit (${sopWordCount} words).`);
+        setLoading(false);
+        return;
+      }
+    }
 
     const res = await fetch("/api/student/bids", {
       method: "POST",
@@ -56,6 +79,7 @@ export function CourseCard({
         offeringId: offering.id,
         roundId: activeRoundId,
         points: bidPoints,
+        ...(offering.requiresSop ? { sopText: sopText.trim() } : {}),
       }),
     });
 
@@ -183,12 +207,50 @@ export function CourseCard({
           </p>
         )}
 
+        {/* SOP badge for non-open-round view */}
+        {offering.requiresSop && !isRoundOpen && (
+          <div className="flex items-center gap-1 mb-2">
+            <Badge variant="secondary" className="text-xs">
+              <FileText className="h-2.5 w-2.5 mr-1" />
+              SOP Required
+            </Badge>
+          </div>
+        )}
+
         {/* Bid section */}
         {isRoundOpen && offering.status === "BIDDING_OPEN" && (
-          <div className="mt-auto pt-3 border-t border-slate-100">
+          <div className="mt-auto pt-3 border-t border-slate-100 space-y-3">
             {error && (
-              <p className="text-xs text-red-600 mb-2">{error}</p>
+              <p className="text-xs text-red-600">{error}</p>
             )}
+
+            {/* SOP textarea — shown only for SOP-based courses */}
+            {offering.requiresSop && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 mb-1">
+                  <FileText className="h-3.5 w-3.5 text-indigo-500" />
+                  <span className="text-xs font-semibold text-indigo-700">
+                    Statement of Purpose <span className="text-red-500">*</span>
+                  </span>
+                </div>
+                <Textarea
+                  rows={4}
+                  value={sopText}
+                  onChange={(e) => setSopText(e.target.value)}
+                  placeholder="Write your statement of purpose here…"
+                  className="text-sm resize-none"
+                />
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Selection is based on SOP score, not bid points.</span>
+                  {sopLimit > 0 && (
+                    <span className={sopOverLimit ? "text-red-500 font-semibold" : ""}>
+                      {sopWordCount} / {sopLimit} words
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <div className="flex-1">
                 <Input
@@ -205,6 +267,11 @@ export function CourseCard({
                     Min to win: {offering.mrb} pts
                   </p>
                 )}
+                {offering.requiresSop && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Bid points are not used for ranking on this course.
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <Button
@@ -214,7 +281,7 @@ export function CourseCard({
                   disabled={loading}
                   className="text-xs"
                 >
-                  {existingBid ? "Update" : "Bid"}
+                  {existingBid ? "Update" : "Apply"}
                 </Button>
                 {existingBid && (
                   <Button
@@ -233,10 +300,20 @@ export function CourseCard({
         )}
 
         {existingBid && !isRoundOpen && (
-          <div className="mt-auto pt-3 border-t border-slate-100">
-            <p className="text-xs text-slate-500">
-              Your bid: <span className="font-semibold text-indigo-700">{existingBid.points} pts</span>
-            </p>
+          <div className="mt-auto pt-3 border-t border-slate-100 space-y-1">
+            {!offering.requiresSop && (
+              <p className="text-xs text-slate-500">
+                Your bid: <span className="font-semibold text-indigo-700">{existingBid.points} pts</span>
+              </p>
+            )}
+            {offering.requiresSop && existingBid.sopText && (
+              <p className="text-xs text-slate-500">
+                SOP submitted ·{" "}
+                {existingBid.sopScore !== null && existingBid.sopScore !== undefined
+                  ? `Score: ${existingBid.sopScore}/100`
+                  : "Awaiting score"}
+              </p>
+            )}
           </div>
         )}
       </CardContent>

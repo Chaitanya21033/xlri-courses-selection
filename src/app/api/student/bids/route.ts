@@ -10,6 +10,7 @@ const BidSchema = z.object({
   offeringId: z.string(),
   roundId: z.string(),
   points: z.number().int().min(0).max(100000),
+  sopText: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -27,7 +28,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { offeringId, roundId, points } = body;
+  const { offeringId, roundId, points, sopText } = body;
+
+  // Fetch offering to check SOP requirements before business validation
+  const offeringForSop = await db.courseOffering.findUnique({
+    where: { id: offeringId },
+    select: { requiresSop: true, sopWordLimit: true },
+  });
+
+  if (offeringForSop?.requiresSop) {
+    const trimmed = sopText?.trim() ?? "";
+    if (!trimmed) {
+      return NextResponse.json(
+        { error: "A Statement of Purpose (SOP) is required for this course." },
+        { status: 422 }
+      );
+    }
+    const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+    if (offeringForSop.sopWordLimit && wordCount > offeringForSop.sopWordLimit) {
+      return NextResponse.json(
+        { error: `SOP exceeds the ${offeringForSop.sopWordLimit}-word limit (submitted: ${wordCount} words).` },
+        { status: 422 }
+      );
+    }
+  }
 
   // Server-side validation (outside transaction — cheap read-only check)
   const validation = await validateBid(userId, offeringId, roundId, points);
@@ -99,10 +123,15 @@ export async function POST(req: NextRequest) {
         data: { reservedPoints: { increment: diff } },
       });
 
+      // Build SOP update fields if sopText was submitted
+      const sopFields = sopText !== undefined
+        ? { sopText: sopText.trim(), sopSubmittedAt: new Date() }
+        : {};
+
       if (existingBid) {
         const updatedBid = await tx.bid.update({
           where: { id: existingBid.id },
-          data: { points, updatedAt: new Date() },
+          data: { points, updatedAt: new Date(), ...sopFields },
         });
         await tx.bidHistory.create({
           data: {
@@ -115,7 +144,7 @@ export async function POST(req: NextRequest) {
         return { bid: updatedBid, action: "UPDATED" };
       } else {
         const newBid = await tx.bid.create({
-          data: { userId, offeringId, roundId, points, status: BID_STATUS.ACTIVE },
+          data: { userId, offeringId, roundId, points, status: BID_STATUS.ACTIVE, ...sopFields },
         });
         await tx.bidHistory.create({
           data: {

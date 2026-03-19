@@ -70,6 +70,7 @@ export const AUDIT_ACTION = {
   OVERRIDE_APPLIED: "OVERRIDE_APPLIED",
   POINTS_REIMBURSED: "POINTS_REIMBURSED",
   IMPORT_COMPLETED: "IMPORT_COMPLETED",
+  SOP_SCORED: "SOP_SCORED",
 } as const;
 
 export const NOTIFICATION_TYPE = {
@@ -87,3 +88,7 @@ export const MIN_BID_POINTS = 1;
 export const MAX_COURSES_PER_STUDENT = 8;
 export const MIN_CREDITS = 6;
 export const MAX_CREDITS = 20;
+
+// SOP configuration bounds (word-based)
+export const SOP_WORD_LIMIT_MIN = 50;    // floor: at least 50 words required
+export const SOP_WORD_LIMIT_MAX = 1000;  // ceiling: max 1000 words allowed

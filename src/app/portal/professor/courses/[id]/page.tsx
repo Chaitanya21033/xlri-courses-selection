@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCourseStatusColor } from "@/lib/utils";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import { ProfessorCourseEditForm } from "./prof-course-edit-form";
 import { TieBreakForm } from "@/app/portal/admin/courses/[id]/tiebreak-form";
 import { OutlineUpload } from "./outline-upload";
@@ -92,6 +92,25 @@ export default async function ProfessorCourseDetailPage({
             <p className="font-semibold text-emerald-800">Tie-break: {offering.tieBreakPolicy.method.replace(/_/g, " ")}</p>
             {offering.tieBreakPolicy.isLocked && <p className="text-xs text-emerald-600 mt-0.5">Locked — cannot be changed while bidding is open</p>}
           </div>
+        </div>
+      )}
+
+      {/* SOP Review link — shown when course uses SOP-based intake */}
+      {offering.requiresSop && (
+        <div className="flex items-start gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+          <FileText className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-indigo-800">SOP-Based Intake Enabled</p>
+            <p className="text-sm text-indigo-700 mt-0.5">
+              Students must submit a Statement of Purpose. Ranking is based on your SOP scores.
+              Word limit: {offering.sopWordLimit ?? "—"} words.
+            </p>
+          </div>
+          <Link href={`/portal/professor/courses/${id}/sop-review`}>
+            <Button variant="outline" size="sm" className="text-indigo-700 border-indigo-300 hover:bg-indigo-100">
+              Review SOPs &amp; Score
+            </Button>
+          </Link>
         </div>
       )}
 

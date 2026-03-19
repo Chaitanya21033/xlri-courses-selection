@@ -81,3 +81,11 @@ export function truncate(text: string, length = 100): string {
   if (text.length <= length) return text;
   return text.slice(0, length) + "…";
 }
+
+/**
+ * Count words in a string.
+ * Splits on whitespace; empty / whitespace-only strings return 0.
+ */
+export function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
