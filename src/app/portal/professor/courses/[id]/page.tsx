@@ -72,14 +72,14 @@ export default async function ProfessorCourseDetailPage({
         ))}
       </div>
 
-      {/* Tie-break alert */}
+      {/* Ranking method alert */}
       {!offering.tieBreakPolicy && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
           <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-amber-800">Tie-break policy required</p>
+            <p className="font-semibold text-amber-800">Ranking method required</p>
             <p className="text-sm text-amber-700 mt-0.5">
-              Bidding cannot open for this course until a tie-break policy is defined. Set it below.
+              Bidding cannot open until you set a ranking / tie-break method below. For SOP-based selection, choose "Statement of Purpose".
             </p>
           </div>
         </div>
@@ -89,7 +89,7 @@ export default async function ProfessorCourseDetailPage({
         <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
           <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-emerald-800">Tie-break: {offering.tieBreakPolicy.method.replace(/_/g, " ")}</p>
+            <p className="font-semibold text-emerald-800">Ranking method: {offering.tieBreakPolicy.method.replace(/_/g, " ")}</p>
             {offering.tieBreakPolicy.isLocked && <p className="text-xs text-emerald-600 mt-0.5">Locked — cannot be changed while bidding is open</p>}
           </div>
         </div>
@@ -148,14 +148,20 @@ export default async function ProfessorCourseDetailPage({
         </CardContent>
       </Card>
 
-      {/* Tie-break */}
+      {/* Ranking / tie-break */}
       <Card>
-        <CardHeader><CardTitle>Tie-break Policy</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Ranking Method</CardTitle>
+          <p className="text-sm text-slate-500 mt-1">
+            Choose how students are ranked during seat allocation. Select <strong>Statement of Purpose</strong> to collect SOPs from applicants and score them yourself.
+          </p>
+        </CardHeader>
         <CardContent>
           <TieBreakForm
             offeringId={id}
             apiPath={`/api/professor/courses/${id}/tiebreak`}
             existingPolicy={offering.tieBreakPolicy}
+            existingSopWordLimit={offering.sopWordLimit}
           />
         </CardContent>
       </Card>

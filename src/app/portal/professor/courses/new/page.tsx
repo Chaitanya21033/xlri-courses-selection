@@ -10,6 +10,7 @@ import {
   Paperclip, X, Upload, FileText, Loader2, Scale,
 } from "lucide-react";
 import Link from "next/link";
+import { SOP_WORD_LIMIT_MIN, SOP_WORD_LIMIT_MAX } from "@/lib/constants";
 
 const ELIGIBILITY_OPTIONS = [
   { value: "BM",      label: "BM only",       desc: "Bachelor of Management students only" },
@@ -27,30 +28,42 @@ const TIE_BREAK_OPTIONS = [
     label: "CQPI (highest first)",
     desc: "Student with higher CQPI / GPA wins the tie.",
     needsPrereq: false,
+    needsSopWordLimit: false,
   },
   {
     value: "GRADE_DESC",
     label: "Grade in prerequisite course",
     desc: "Higher grade in a specified prerequisite course wins the tie.",
     needsPrereq: true,
+    needsSopWordLimit: false,
   },
   {
     value: "COMPOSITE_RANK",
     label: "Composite ranking",
     desc: "Weighted combination of CQPI and other metrics (configured after cycle assignment).",
     needsPrereq: false,
+    needsSopWordLimit: false,
   },
   {
     value: "LOTTERY",
     label: "Random lottery",
     desc: "A fair random draw is held among all tied students.",
     needsPrereq: false,
+    needsSopWordLimit: false,
   },
   {
     value: "MANUAL_RANK",
     label: "Manual ranked list",
     desc: "You upload a ranked list of students before bidding opens.",
     needsPrereq: false,
+    needsSopWordLimit: false,
+  },
+  {
+    value: "SOP_SCORE",
+    label: "Statement of Purpose (SOP)",
+    desc: "Students submit a written SOP when applying. You read each SOP and assign a score (0–100). Seats are allocated in descending score order — bid points are not used.",
+    needsPrereq: false,
+    needsSopWordLimit: true,
   },
 ];
 
@@ -93,6 +106,7 @@ export default function NewCoursePage() {
   const [tieBreak, setTieBreak] = useState({
     method: "CQPI_DESC",
     prereqCode: "",
+    sopWordLimit: 300,
   });
 
   // Attachment state
@@ -139,19 +153,27 @@ export default function NewCoursePage() {
   async function handleSaveTieBreak(e: React.FormEvent) {
     e.preventDefault();
     if (!createdCourseId) return;
+
+    // Client-side validation for SOP word limit
+    if (tieBreak.method === "SOP_SCORE") {
+      const limit = tieBreak.sopWordLimit;
+      if (!limit || limit < SOP_WORD_LIMIT_MIN || limit > SOP_WORD_LIMIT_MAX) {
+        setError(`SOP word limit must be between ${SOP_WORD_LIMIT_MIN} and ${SOP_WORD_LIMIT_MAX}.`);
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     try {
-      // PATCH the course to store the tie-break preference
+      const selectedOpt = TIE_BREAK_OPTIONS.find((o) => o.value === tieBreak.method);
       const res = await fetch(`/api/professor/proposals/${createdCourseId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           defaultTieBreakMethod: tieBreak.method,
-          defaultTieBreakPrereqCode:
-            TIE_BREAK_OPTIONS.find((o) => o.value === tieBreak.method)?.needsPrereq
-              ? tieBreak.prereqCode
-              : null,
+          defaultTieBreakPrereqCode: selectedOpt?.needsPrereq ? tieBreak.prereqCode : null,
+          defaultSopWordLimit: selectedOpt?.needsSopWordLimit ? tieBreak.sopWordLimit : null,
         }),
       });
       const data = await res.json();
@@ -230,7 +252,7 @@ export default function NewCoursePage() {
             onClick={() => {
               setStep("details");
               setForm({ code: "", title: "", credits: 3, termNumber: 5, defaultEligibility: "ALL", defaultSeatCap: 40, description: "", prerequisites: "", learningGoals: "", scheduleNotes: "" });
-              setTieBreak({ method: "CQPI_DESC", prereqCode: "" });
+              setTieBreak({ method: "CQPI_DESC", prereqCode: "", sopWordLimit: 300 });
               setCreatedCourseId(null);
               setAttachments([]);
             }}
@@ -434,6 +456,30 @@ export default function NewCoursePage() {
                           className="max-w-xs"
                         />
                         <p className="text-xs text-slate-400">The course whose grade will be used to break ties.</p>
+                      </div>
+                    )}
+
+                    {/* SOP word limit — only for SOP_SCORE */}
+                    {opt.needsSopWordLimit && tieBreak.method === opt.value && (
+                      <div className="mt-3 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                        <Label className="text-xs">
+                          SOP Word Limit <span className="text-red-500">*</span>{" "}
+                          <span className="text-slate-400 font-normal">({SOP_WORD_LIMIT_MIN}–{SOP_WORD_LIMIT_MAX} words)</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          min={SOP_WORD_LIMIT_MIN}
+                          max={SOP_WORD_LIMIT_MAX}
+                          value={tieBreak.sopWordLimit}
+                          onChange={(e) =>
+                            setTieBreak((t) => ({ ...t, sopWordLimit: parseInt(e.target.value) || SOP_WORD_LIMIT_MIN }))
+                          }
+                          required={tieBreak.method === "SOP_SCORE"}
+                          className="max-w-xs"
+                        />
+                        <p className="text-xs text-slate-400">
+                          Students cannot submit an SOP longer than this. After applications close, you will score each SOP (0–100) and seats are allocated by score.
+                        </p>
                       </div>
                     )}
                   </div>

@@ -30,11 +30,17 @@ export default async function StudentCatalogPage() {
     },
   });
 
+  // Build the full set of eligibility values this student can access
+  const eligibilityFilter = [sp.programme, "BOTH", "ALL"];
+  if (sp.programme === "BM")  eligibilityFilter.push("BM_HRM", "BM_GMP");
+  if (sp.programme === "HRM") eligibilityFilter.push("BM_HRM", "HRM_GMP");
+  if (sp.programme === "GMP") eligibilityFilter.push("BM_GMP", "HRM_GMP");
+
   // Get eligible offerings (include SOP fields so course card can show SOP textarea)
   const offerings = await db.courseOffering.findMany({
     where: {
       status: { in: ["PUBLISHED", "BIDDING_OPEN"] },
-      eligibility: { in: [sp.programme, "BOTH"] },
+      eligibility: { in: eligibilityFilter },
     },
     include: {
       course: true,

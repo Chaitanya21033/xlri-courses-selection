@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { AlertTriangle, BookMarked, Plus } from "lucide-react";
+import { AlertTriangle, BookMarked, FileText, Plus } from "lucide-react";
 import { DeleteOfferingButton, DeleteStandaloneCourseButton } from "./delete-course-button";
 
 const ELIGIBILITY_LABELS: Record<string, string> = {
@@ -208,6 +208,17 @@ export default async function ProfessorCoursesPage() {
                       {o.tieBreakPolicy.isLocked && (
                         <span className="ml-2 text-slate-400">(locked)</span>
                       )}
+                    </div>
+                  )}
+
+                  {/* SOP review quick-link */}
+                  {o.requiresSop && (
+                    <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 mb-3">
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      <span>SOP intake enabled</span>
+                      <Link href={`/portal/professor/courses/${o.id}/sop-review`} className="ml-auto font-medium hover:underline">
+                        Review &amp; Score SOPs →
+                      </Link>
                     </div>
                   )}
 
