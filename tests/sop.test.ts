@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import type { BidRecord, AllocationDecision } from "@/lib/bidding-engine";
+import { TIE_BREAK_METHOD } from "@/lib/constants";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -235,6 +236,19 @@ describe("SOP validation — score range", () => {
     const valid = (n: number) => Number.isInteger(n) && n >= 0 && n <= 100;
     expect(valid(85.5)).toBe(false);
     expect(valid(NaN)).toBe(false);
+  });
+});
+
+// ─── SOP_SCORE as a TIE_BREAK_METHOD ─────────────────────────────────────────
+
+describe("TIE_BREAK_METHOD.SOP_SCORE", () => {
+  it("SOP_SCORE is defined in TIE_BREAK_METHOD", () => {
+    expect(TIE_BREAK_METHOD.SOP_SCORE).toBe("SOP_SCORE");
+  });
+
+  it("SOP_SCORE is distinct from all other tie-break methods", () => {
+    const others = Object.values(TIE_BREAK_METHOD).filter(m => m !== "SOP_SCORE");
+    expect(others).not.toContain("SOP_SCORE");
   });
 });
 

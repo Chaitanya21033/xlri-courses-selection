@@ -41,6 +41,7 @@ export const TIE_BREAK_METHOD = {
   COMPOSITE_RANK: "COMPOSITE_RANK",
   LOTTERY: "LOTTERY",
   MANUAL_RANK: "MANUAL_RANK",
+  SOP_SCORE: "SOP_SCORE",
 } as const;
 
 export const BID_STATUS = {
