@@ -130,10 +130,6 @@ export default async function ProfessorDemandPage() {
                       {activeBids.length}
                     </p>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-lg text-center">
-                    <p className="text-xs text-slate-400">MRB</p>
-                    <p className="text-xl font-bold text-slate-700">{o.mrb}</p>
-                  </div>
                 </div>
 
                 {activeBids.length > 0 && (
