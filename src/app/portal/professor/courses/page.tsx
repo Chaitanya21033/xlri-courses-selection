@@ -46,12 +46,20 @@ export default async function ProfessorCoursesPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Standalone courses — created by this professor, not yet in any offering
-  const offeringCourseIds = offerings.map((o) => o.courseId);
+  // Standalone courses — created by this professor, not yet in ANY offering.
+  // We query ALL offerings for courses this professor created (not just this professor's
+  // offerings) so that courses admin has linked under any instructor are correctly hidden
+  // from the "Course Proposals / Pending" section.
+  const anyLinkedForProf = await db.courseOffering.findMany({
+    where: { course: { createdByProfessorId: profId } },
+    select: { courseId: true },
+  });
+  const anyLinkedCourseIds = anyLinkedForProf.map((o) => o.courseId);
+
   const standaloneCourses = await db.course.findMany({
     where: {
       createdByProfessorId: profId,
-      id: { notIn: offeringCourseIds.length > 0 ? offeringCourseIds : ["__none__"] },
+      id: { notIn: anyLinkedCourseIds.length > 0 ? anyLinkedCourseIds : ["__none__"] },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -211,15 +219,19 @@ export default async function ProfessorCoursesPage() {
                     </div>
                   )}
 
-                  {/* SOP review quick-link */}
+                  {/* SOP review button — shown when SOP intake is enabled */}
                   {o.requiresSop && (
-                    <div className="flex items-center gap-2 p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 mb-3">
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
-                      <span>SOP intake enabled</span>
-                      <Link href={`/portal/professor/courses/${o.id}/sop-review`} className="ml-auto font-medium hover:underline">
-                        Review &amp; Score SOPs →
-                      </Link>
-                    </div>
+                    <Link href={`/portal/professor/courses/${o.id}/sop-review`} className="block mb-3">
+                      <Button variant="outline" size="sm" className="w-full border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+                        <FileText className="h-3.5 w-3.5 mr-1.5" />
+                        View &amp; Score SOPs
+                        {o._count.bids > 0 && (
+                          <span className="ml-auto bg-indigo-100 text-indigo-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                            {o._count.bids}
+                          </span>
+                        )}
+                      </Button>
+                    </Link>
                   )}
 
                   <div className="flex items-center justify-between">

@@ -26,6 +26,7 @@ interface Course {
   termNumber: number | null;
   defaultEligibility: string | null;
   defaultSeatCap: number | null;
+  createdByProfessorId: string | null;
 }
 
 interface Professor {
@@ -92,7 +93,7 @@ export function CycleCourses({ cycleId }: { cycleId: string }) {
 
   useEffect(() => { load(); }, [cycleId]);
 
-  // Pre-fill seatCap and eligibility from selected course
+  // Pre-fill seatCap, eligibility, and professor from selected course
   function handleCourseSelect(courseId: string) {
     const course = courses.find((c) => c.id === courseId);
     setForm((f) => ({
@@ -100,6 +101,8 @@ export function CycleCourses({ cycleId }: { cycleId: string }) {
       courseId,
       seatCap: course?.defaultSeatCap ?? 40,
       eligibility: course?.defaultEligibility ?? "ALL",
+      // Auto-assign the professor who created this course
+      professorId: course?.createdByProfessorId ?? f.professorId,
     }));
   }
 
@@ -153,6 +156,26 @@ export function CycleCourses({ cycleId }: { cycleId: string }) {
     }
   }
 
+  async function handleActivate(offeringId: string) {
+    if (!confirm("Open bidding for this course? Students will immediately be able to see and bid on it.")) return;
+    try {
+      const res = await fetch(`/api/admin/courses/${offeringId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "BIDDING_OPEN" }),
+      });
+      if (res.ok) {
+        await load();
+        router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.error ?? "Could not activate offering");
+      }
+    } catch {
+      alert("Network error");
+    }
+  }
+
   const filteredCourses = courses.filter((c) =>
     !search ||
     c.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -197,6 +220,15 @@ export function CycleCourses({ cycleId }: { cycleId: string }) {
                 }>
                   {o.status.replace("_", " ")}
                 </Badge>
+                {o.status === "DRAFT" && (
+                  <button
+                    onClick={() => handleActivate(o.id)}
+                    className="px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
+                    title="Open bidding for this course"
+                  >
+                    Activate Bidding
+                  </button>
+                )}
                 {o.status === "DRAFT" && o._count.bids === 0 && (
                   <button
                     onClick={() => handleRemove(o.id)}
@@ -264,22 +296,41 @@ export function CycleCourses({ cycleId }: { cycleId: string }) {
             )}
           </div>
 
-          {/* Professor */}
+          {/* Professor — auto-assigned from course creator; show dropdown only when unset */}
           <div className="space-y-1.5">
-            <Label>Professor <span className="text-red-500">*</span></Label>
-            <select
-              value={form.professorId}
-              onChange={(e) => setForm((f) => ({ ...f, professorId: e.target.value }))}
-              required
-              className="w-full h-10 px-3 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">— select a professor —</option>
-              {professors.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.user.name} ({p.department})
-                </option>
-              ))}
-            </select>
+            <Label>Professor</Label>
+            {(() => {
+              const selectedCourse = courses.find((c) => c.id === form.courseId);
+              const autoProf = selectedCourse?.createdByProfessorId
+                ? professors.find((p) => p.id === selectedCourse.createdByProfessorId)
+                : null;
+
+              if (autoProf) {
+                return (
+                  <div className="flex items-center gap-2 h-10 px-3 bg-emerald-50 border border-emerald-200 rounded-md text-sm text-emerald-800">
+                    <span className="font-medium">{autoProf.user.name}</span>
+                    <span className="text-emerald-600 text-xs">({autoProf.department})</span>
+                    <span className="ml-auto text-xs text-emerald-600 italic">auto-assigned from course creator</span>
+                  </div>
+                );
+              }
+
+              return (
+                <select
+                  value={form.professorId}
+                  onChange={(e) => setForm((f) => ({ ...f, professorId: e.target.value }))}
+                  required
+                  className="w-full h-10 px-3 border border-slate-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">— select a professor —</option>
+                  {professors.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.user.name} ({p.department})
+                    </option>
+                  ))}
+                </select>
+              );
+            })()}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
