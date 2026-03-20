@@ -170,17 +170,6 @@ export default async function StudentBidsPage() {
       </Card>
 
       {/* Bid rules reminder */}
-      <Card className="bg-slate-50 border-slate-200">
-        <CardContent className="p-5">
-          <h3 className="font-semibold text-slate-700 mb-2 text-sm">Bidding Rules</h3>
-          <ul className="space-y-1 text-xs text-slate-500">
-            <li>• You can withdraw from a <strong>losing</strong> course at any time — points are reimbursed.</li>
-            <li>• You can withdraw from a <strong>winning</strong> course only if your bid is at 0 pts.</li>
-            <li>• Post-round confirmation: you may withdraw confirmed allocations during the confirmation round.</li>
-            <li>• All actions are logged in the audit trail.</li>
-          </ul>
-        </CardContent>
-      </Card>
     </div>
   );
 }
