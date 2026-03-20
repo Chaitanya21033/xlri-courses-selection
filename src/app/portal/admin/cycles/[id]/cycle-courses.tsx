@@ -153,6 +153,26 @@ export function CycleCourses({ cycleId }: { cycleId: string }) {
     }
   }
 
+  async function handleActivate(offeringId: string) {
+    if (!confirm("Open bidding for this course? Students will immediately be able to see and bid on it.")) return;
+    try {
+      const res = await fetch(`/api/admin/courses/${offeringId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "BIDDING_OPEN" }),
+      });
+      if (res.ok) {
+        await load();
+        router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.error ?? "Could not activate offering");
+      }
+    } catch {
+      alert("Network error");
+    }
+  }
+
   const filteredCourses = courses.filter((c) =>
     !search ||
     c.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -197,6 +217,15 @@ export function CycleCourses({ cycleId }: { cycleId: string }) {
                 }>
                   {o.status.replace("_", " ")}
                 </Badge>
+                {o.status === "DRAFT" && (
+                  <button
+                    onClick={() => handleActivate(o.id)}
+                    className="px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
+                    title="Open bidding for this course"
+                  >
+                    Activate Bidding
+                  </button>
+                )}
                 {o.status === "DRAFT" && o._count.bids === 0 && (
                   <button
                     onClick={() => handleRemove(o.id)}
