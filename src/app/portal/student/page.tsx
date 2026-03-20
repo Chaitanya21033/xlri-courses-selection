@@ -212,7 +212,7 @@ export default async function StudentDashboard() {
                         {bid.offering.course.title}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {bid.offering.course.code} · MRB: {bid.offering.mrb}
+                        {bid.offering.course.code}
                       </p>
                     </div>
                     <div className="text-right ml-3">

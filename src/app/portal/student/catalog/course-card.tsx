@@ -179,15 +179,11 @@ export function CourseCard({
           )}
         </div>
 
-        {/* Stats — only show seats and MRB, hide bid count from students */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        {/* Stats */}
+        <div className="grid grid-cols-1 gap-2 mb-3">
           <div className="text-center p-2 rounded-lg bg-slate-50">
             <p className="text-xs text-slate-400">Seats</p>
             <p className="text-sm font-bold text-slate-700">{offering.seatCap}</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-indigo-50">
-            <p className="text-xs text-indigo-400">MRB</p>
-            <p className="text-sm font-bold text-indigo-700">{offering.mrb}</p>
           </div>
         </div>
 
@@ -262,11 +258,6 @@ export function CourseCard({
                   placeholder="Bid points"
                   className="text-sm"
                 />
-                {offering.mrb > 0 && (
-                  <p className="text-xs text-slate-400 mt-1">
-                    Min to win: {offering.mrb} pts
-                  </p>
-                )}
                 {offering.requiresSop && (
                   <p className="text-xs text-slate-400 mt-1">
                     Bid points are not used for ranking on this course.
