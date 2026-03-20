@@ -7,7 +7,8 @@ const ELIGIBILITY_OPTIONS = ["BM", "HRM", "GMP", "BM_HRM", "BM_GMP", "HRM_GMP", 
 
 const LinkCourseSchema = z.object({
   courseId: z.string().min(1),
-  professorId: z.string().min(1),
+  // professorId is optional — if omitted the course's creator professor is used automatically
+  professorId: z.string().min(1).optional(),
   eligibility: z.enum(ELIGIBILITY_OPTIONS).default("ALL"),
   seatCap: z.number().int().min(1).max(1000),
   reservedSeatsRound1: z.number().int().min(0).default(0),
@@ -71,8 +72,17 @@ export async function POST(
     return NextResponse.json({ error: "Course not found" }, { status: 404 });
   }
 
-  // Verify professor exists
-  const professor = await db.professorProfile.findUnique({ where: { id: body.professorId } });
+  // Resolve professor: use explicitly supplied professorId, otherwise fall back to
+  // the professor who originally created the course.
+  const resolvedProfessorId = body.professorId ?? course.createdByProfessorId;
+  if (!resolvedProfessorId) {
+    return NextResponse.json(
+      { error: "No professor assigned. Please select a professor or have the course created by a professor first." },
+      { status: 400 }
+    );
+  }
+
+  const professor = await db.professorProfile.findUnique({ where: { id: resolvedProfessorId } });
   if (!professor) {
     return NextResponse.json({ error: "Professor not found" }, { status: 404 });
   }
@@ -95,7 +105,7 @@ export async function POST(
     data: {
       courseId: body.courseId,
       cycleId,
-      professorId: body.professorId,
+      professorId: resolvedProfessorId,
       eligibility: body.eligibility,
       seatCap: body.seatCap,
       reservedSeatsRound1: body.reservedSeatsRound1,
