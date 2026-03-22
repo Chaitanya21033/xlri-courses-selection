@@ -20,6 +20,7 @@ datasource db {
 // AllocationStatus: TENTATIVE | CONFIRMED | WITHDRAWN | WAITLISTED
 // TieBreakMethod: CQPI_DESC | GRADE_DESC | COMPOSITE_RANK | LOTTERY | MANUAL_RANK
 // BidStatus: ACTIVE | WINNING | LOSING | REIMBURSED | WITHDRAWN
+// SopSelectionStatus: SELECTED | MAYBE | NOT_SELECTED
 // AuditAction: see constants in lib/constants.ts
 // NotificationType: ROUND_OPENED | ROUND_CLOSED | ALLOCATION_RESULT | CONFIRMATION_REQUIRED | COURSE_CANCELLED | ANNOUNCEMENT | SYSTEM
 
@@ -249,9 +250,10 @@ model Bid {
   // SOP fields — only populated for offerings with requiresSop=true
   sopText         String?   // student-submitted statement of purpose
   sopSubmittedAt  DateTime? // timestamp of last SOP submission/update
-  sopScore        Int?      // professor-assigned score 0–100
-  sopScoredAt     DateTime? // timestamp of scoring
-  sopScoredById   String?   // userId of professor who scored this SOP
+  sopScore           Int?      // professor-assigned score 0–100
+  sopScoredAt        DateTime? // timestamp of scoring
+  sopScoredById      String?   // userId of professor who scored this SOP
+  sopSelectionStatus String?   // SopSelectionStatus: SELECTED | MAYBE | NOT_SELECTED
 
   history BidHistory[]
 

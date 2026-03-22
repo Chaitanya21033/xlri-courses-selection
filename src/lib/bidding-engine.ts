@@ -38,7 +38,8 @@ export interface BidRecord {
   compositeRank?: number;
   manualRank?: number;
   // SOP-based intake fields
-  sopScore?: number | null;    // professor-assigned score 0–100 (null = not yet scored)
+  sopScore?: number | null;             // professor-assigned score 0–100 (null = not yet scored)
+  sopSelectionStatus?: string | null;   // SELECTED | MAYBE | NOT_SELECTED | null
 }
 
 export interface AllocationDecision {
@@ -199,8 +200,18 @@ function allocateSopCourse(
 ): AllocationDecision[] {
   if (bids.length === 0) return [];
 
-  // Sort: highest SOP score first; null scores treated as 0; ties broken by rollNumber asc
+  // Priority order for sopSelectionStatus: SELECTED=0, MAYBE=1, null/unset=2, NOT_SELECTED=3
+  function statusPriority(status: string | null | undefined): number {
+    if (status === "SELECTED") return 0;
+    if (status === "MAYBE") return 1;
+    if (status === "NOT_SELECTED") return 3;
+    return 2; // unset / null
+  }
+
+  // Sort: selection status bucket first, then highest SOP score within bucket, then rollNumber
   const sorted = [...bids].sort((a, b) => {
+    const bucketDiff = statusPriority(a.sopSelectionStatus) - statusPriority(b.sopSelectionStatus);
+    if (bucketDiff !== 0) return bucketDiff;
     const scoreA = a.sopScore ?? 0;
     const scoreB = b.sopScore ?? 0;
     if (scoreB !== scoreA) return scoreB - scoreA;
@@ -294,6 +305,7 @@ export async function allocateCourse(
       cqpi: sp.cqpi,
       prerequisiteGrade: preqGrade,
       sopScore: (b as any).sopScore ?? null,
+      sopSelectionStatus: (b as any).sopSelectionStatus ?? null,
     };
   });
 
@@ -525,18 +537,7 @@ export async function validateBid(
     };
   }
 
-  // 5. Check points don't go below MRB (when reducing an existing bid)
-  const existingBid = await db.bid.findUnique({
-    where: {
-      userId_offeringId_roundId: { userId, offeringId, roundId },
-    },
-  });
-  if (existingBid && points < offering.mrb && points !== 0) {
-    return {
-      valid: false,
-      reason: `Bid cannot be below MRB of ${offering.mrb} points.`,
-    };
-  }
+  // 5. (MRB floor check removed — students may freely reduce their bids)
 
   // 6. Check available points in account
   const pointAccount = await db.pointAccount.findUnique({
