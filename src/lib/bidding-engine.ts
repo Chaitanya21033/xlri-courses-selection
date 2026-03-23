@@ -128,13 +128,6 @@ export function resolveTieBreak(
         return a.rollNumber.localeCompare(b.rollNumber);
       });
 
-    case TIE_BREAK_METHOD.GRADE_DESC:
-      return bids.sort((a, b) => {
-        const diff = (b.prerequisiteGrade ?? 0) - (a.prerequisiteGrade ?? 0);
-        if (diff !== 0) return diff;
-        return a.rollNumber.localeCompare(b.rollNumber);
-      });
-
     case TIE_BREAK_METHOD.COMPOSITE_RANK:
       return bids.sort((a, b) => {
         const diff = (a.compositeRank ?? 9999) - (b.compositeRank ?? 9999);
@@ -151,28 +144,6 @@ export function resolveTieBreak(
         const diff =
           (rankMap.get(a.studentProfileId) ?? 9999) -
           (rankMap.get(b.studentProfileId) ?? 9999);
-        if (diff !== 0) return diff;
-        return a.rollNumber.localeCompare(b.rollNumber);
-      });
-    }
-
-    case TIE_BREAK_METHOD.LOTTERY: {
-      // Deterministic shuffle using seed (for auditability)
-      const s = seed ?? 42;
-      return bids.sort((a, b) => {
-        const hashA =
-          (a.studentProfileId
-            .split("")
-            .reduce((acc, c) => acc + c.charCodeAt(0), 0) *
-            s) %
-          10000;
-        const hashB =
-          (b.studentProfileId
-            .split("")
-            .reduce((acc, c) => acc + c.charCodeAt(0), 0) *
-            s) %
-          10000;
-        const diff = hashA - hashB;
         if (diff !== 0) return diff;
         return a.rollNumber.localeCompare(b.rollNumber);
       });

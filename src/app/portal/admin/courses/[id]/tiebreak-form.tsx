@@ -19,18 +19,14 @@ interface TieBreakPolicy {
 
 const METHOD_LABELS: Record<string, string> = {
   CQPI_DESC: "CQPI (highest first)",
-  GRADE_DESC: "Grade in prerequisite course (highest first)",
   COMPOSITE_RANK: "Composite ranking (weighted criteria)",
-  LOTTERY: "Random lottery",
   MANUAL_RANK: "Manual ranked list (upload CSV)",
   SOP_SCORE: "Statement of Purpose (SOP) — professor-scored ranking",
 };
 
 const METHOD_DESCRIPTIONS: Record<string, string> = {
   CQPI_DESC: "Students with higher cumulative quality point index are prioritised. Fully automated — no additional input required.",
-  GRADE_DESC: "Students who scored higher in a specified prerequisite course are prioritised. Requires specifying the course code.",
   COMPOSITE_RANK: "A weighted combination of CQPI and grades. Specify weights as JSON: {\"cqpi\": 0.6, \"grade\": 0.4}",
-  LOTTERY: "Tie is resolved randomly. Auditable seed is recorded. Use only when no merit-based criterion is appropriate.",
   MANUAL_RANK: "Admin or professor uploads a ranked list of eligible students. Requires uploading before bidding opens.",
   SOP_SCORE: "Students submit a Statement of Purpose when applying. You read each SOP and assign a score (0–100). Final ranking is determined by your scores in descending order. Bid points are not used.",
 };
@@ -122,17 +118,6 @@ export function TieBreakForm({
         </select>
         <p className="text-xs text-slate-500">{METHOD_DESCRIPTIONS[form.method]}</p>
       </div>
-
-      {form.method === "GRADE_DESC" && (
-        <div className="space-y-1.5">
-          <Label>Prerequisite Course Code *</Label>
-          <Input
-            placeholder="e.g. MKTG101"
-            value={form.prerequisiteCourseCode}
-            onChange={e => setForm(f => ({ ...f, prerequisiteCourseCode: e.target.value }))}
-          />
-        </div>
-      )}
 
       {form.method === "COMPOSITE_RANK" && (
         <div className="space-y-1.5">
