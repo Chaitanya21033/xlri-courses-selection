@@ -19,15 +19,11 @@ interface TieBreakPolicy {
 
 const METHOD_LABELS: Record<string, string> = {
   CQPI_DESC: "CQPI (highest first)",
-  COMPOSITE_RANK: "Composite ranking (weighted criteria)",
-  MANUAL_RANK: "Manual ranked list (upload CSV)",
   SOP_SCORE: "Statement of Purpose (SOP) — professor-scored ranking",
 };
 
 const METHOD_DESCRIPTIONS: Record<string, string> = {
   CQPI_DESC: "Students with higher cumulative quality point index are prioritised. Fully automated — no additional input required.",
-  COMPOSITE_RANK: "A weighted combination of CQPI and grades. Specify weights as JSON: {\"cqpi\": 0.6, \"grade\": 0.4}",
-  MANUAL_RANK: "Admin or professor uploads a ranked list of eligible students. Requires uploading before bidding opens.",
   SOP_SCORE: "Students submit a Statement of Purpose when applying. You read each SOP and assign a score (0–100). Final ranking is determined by your scores in descending order. Bid points are not used.",
 };
 
@@ -118,31 +114,6 @@ export function TieBreakForm({
         </select>
         <p className="text-xs text-slate-500">{METHOD_DESCRIPTIONS[form.method]}</p>
       </div>
-
-      {form.method === "COMPOSITE_RANK" && (
-        <div className="space-y-1.5">
-          <Label>Composite Weights (JSON)</Label>
-          <Input
-            value={form.compositeWeightJson}
-            onChange={e => setForm(f => ({ ...f, compositeWeightJson: e.target.value }))}
-            placeholder='{"cqpi": 0.6, "grade": 0.4}'
-          />
-          <p className="text-xs text-slate-400">Keys: cqpi, grade. Values must sum to 1.0.</p>
-        </div>
-      )}
-
-      {form.method === "MANUAL_RANK" && (
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
-          <p className="font-medium mb-1">Manual rank list</p>
-          <p className="text-xs text-slate-500">Upload a JSON array of roll numbers in preferred order. Example: ["BM2301","BM2302","HRM2401"]</p>
-          <Input
-            className="mt-2"
-            placeholder='["ROLLNO1","ROLLNO2",...]'
-            value={form.manualRankJson}
-            onChange={e => setForm(f => ({ ...f, manualRankJson: e.target.value }))}
-          />
-        </div>
-      )}
 
       {form.method === "SOP_SCORE" && (
         <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-3">
