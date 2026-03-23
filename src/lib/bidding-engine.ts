@@ -128,27 +128,6 @@ export function resolveTieBreak(
         return a.rollNumber.localeCompare(b.rollNumber);
       });
 
-    case TIE_BREAK_METHOD.COMPOSITE_RANK:
-      return bids.sort((a, b) => {
-        const diff = (a.compositeRank ?? 9999) - (b.compositeRank ?? 9999);
-        if (diff !== 0) return diff;
-        return a.rollNumber.localeCompare(b.rollNumber);
-      });
-
-    case TIE_BREAK_METHOD.MANUAL_RANK: {
-      if (!manualRankJson) return bids;
-      const ranks: Array<{ studentId: string; rank: number }> =
-        JSON.parse(manualRankJson);
-      const rankMap = new Map(ranks.map((r) => [r.studentId, r.rank]));
-      return bids.sort((a, b) => {
-        const diff =
-          (rankMap.get(a.studentProfileId) ?? 9999) -
-          (rankMap.get(b.studentProfileId) ?? 9999);
-        if (diff !== 0) return diff;
-        return a.rollNumber.localeCompare(b.rollNumber);
-      });
-    }
-
     default:
       return bids;
   }
