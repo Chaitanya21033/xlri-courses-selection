@@ -79,6 +79,7 @@ export default async function SopReviewPage({
     sopSubmittedAt: b.sopSubmittedAt?.toISOString() ?? null,
     sopScore: b.sopScore,
     sopScoredAt: b.sopScoredAt?.toISOString() ?? null,
+    sopSelectionStatus: (b.sopSelectionStatus as "SELECTED" | "MAYBE" | "NOT_SELECTED" | null) ?? null,
   }));
 
   return (
@@ -146,8 +147,8 @@ export default async function SopReviewPage({
             <CardTitle>Applicants & SOP Scores</CardTitle>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Read each SOP and assign a score from 0 to 100. Ranking during allocation will be
-            based on these scores (highest first). Ties are broken by roll number.
+            Read each SOP, assign a score (0–100), and mark each applicant as Selected, Maybe, or Not Selected.
+            Final ranking: Selected first, then Maybe, then Not Selected — each group sorted by score descending.
           </p>
         </CardHeader>
         <CardContent className="p-0">

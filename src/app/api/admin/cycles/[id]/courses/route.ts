@@ -178,6 +178,8 @@ export async function DELETE(
     );
   }
 
+  // Delete related TieBreakPolicy first (foreign key constraint)
+  await db.tieBreakPolicy.deleteMany({ where: { offeringId } });
   await db.courseOffering.delete({ where: { id: offeringId } });
 
   return NextResponse.json({ success: true });

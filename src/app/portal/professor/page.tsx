@@ -108,7 +108,6 @@ export default async function ProfessorDashboard() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Eligibility</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Seats</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Bids</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">MRB</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Tie-break</th>
                   <th className="px-4 py-3" />
@@ -132,7 +131,6 @@ export default async function ProfessorDashboard() {
                         {o._count.bids}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-indigo-700">{o.mrb}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getCourseStatusColor(o.status)}`}>
                         {o.status.replace("_", " ")}

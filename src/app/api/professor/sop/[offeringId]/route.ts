@@ -14,9 +14,13 @@ import { createAuditLog } from "@/lib/audit";
 import { AUDIT_ACTION } from "@/lib/constants";
 import { z } from "zod";
 
+const SOP_SELECTION_STATUSES = ["SELECTED", "MAYBE", "NOT_SELECTED"] as const;
+type SopSelectionStatus = (typeof SOP_SELECTION_STATUSES)[number];
+
 const ScoreEntrySchema = z.object({
   bidId: z.string(),
-  sopScore: z.number().int().min(0).max(100),
+  sopScore: z.number().int().min(0).max(100).optional(),
+  sopSelectionStatus: z.enum(SOP_SELECTION_STATUSES).optional(),
 });
 
 const SubmitScoresSchema = z.object({
@@ -112,6 +116,7 @@ export async function GET(
       sopSubmittedAt: b.sopSubmittedAt,
       sopScore: b.sopScore,
       sopScoredAt: b.sopScoredAt,
+      sopSelectionStatus: b.sopSelectionStatus,
     })),
   });
 }
@@ -169,13 +174,16 @@ export async function POST(
       );
     }
 
+    const updateData: Record<string, unknown> = {
+      sopScoredAt: now,
+      sopScoredById: userId,
+    };
+    if (entry.sopScore !== undefined) updateData.sopScore = entry.sopScore;
+    if (entry.sopSelectionStatus !== undefined) updateData.sopSelectionStatus = entry.sopSelectionStatus;
+
     await db.bid.update({
       where: { id: entry.bidId },
-      data: {
-        sopScore: entry.sopScore,
-        sopScoredAt: now,
-        sopScoredById: userId,
-      },
+      data: updateData,
     });
 
     updated.push(entry.bidId);

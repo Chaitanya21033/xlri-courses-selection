@@ -38,7 +38,8 @@ export interface BidRecord {
   compositeRank?: number;
   manualRank?: number;
   // SOP-based intake fields
-  sopScore?: number | null;    // professor-assigned score 0–100 (null = not yet scored)
+  sopScore?: number | null;             // professor-assigned score 0–100 (null = not yet scored)
+  sopSelectionStatus?: string | null;   // SELECTED | MAYBE | NOT_SELECTED | null
 }
 
 export interface AllocationDecision {
@@ -127,13 +128,6 @@ export function resolveTieBreak(
         return a.rollNumber.localeCompare(b.rollNumber);
       });
 
-    case TIE_BREAK_METHOD.GRADE_DESC:
-      return bids.sort((a, b) => {
-        const diff = (b.prerequisiteGrade ?? 0) - (a.prerequisiteGrade ?? 0);
-        if (diff !== 0) return diff;
-        return a.rollNumber.localeCompare(b.rollNumber);
-      });
-
     case TIE_BREAK_METHOD.COMPOSITE_RANK:
       return bids.sort((a, b) => {
         const diff = (a.compositeRank ?? 9999) - (b.compositeRank ?? 9999);
@@ -150,28 +144,6 @@ export function resolveTieBreak(
         const diff =
           (rankMap.get(a.studentProfileId) ?? 9999) -
           (rankMap.get(b.studentProfileId) ?? 9999);
-        if (diff !== 0) return diff;
-        return a.rollNumber.localeCompare(b.rollNumber);
-      });
-    }
-
-    case TIE_BREAK_METHOD.LOTTERY: {
-      // Deterministic shuffle using seed (for auditability)
-      const s = seed ?? 42;
-      return bids.sort((a, b) => {
-        const hashA =
-          (a.studentProfileId
-            .split("")
-            .reduce((acc, c) => acc + c.charCodeAt(0), 0) *
-            s) %
-          10000;
-        const hashB =
-          (b.studentProfileId
-            .split("")
-            .reduce((acc, c) => acc + c.charCodeAt(0), 0) *
-            s) %
-          10000;
-        const diff = hashA - hashB;
         if (diff !== 0) return diff;
         return a.rollNumber.localeCompare(b.rollNumber);
       });
@@ -199,8 +171,18 @@ function allocateSopCourse(
 ): AllocationDecision[] {
   if (bids.length === 0) return [];
 
-  // Sort: highest SOP score first; null scores treated as 0; ties broken by rollNumber asc
+  // Priority order for sopSelectionStatus: SELECTED=0, MAYBE=1, null/unset=2, NOT_SELECTED=3
+  function statusPriority(status: string | null | undefined): number {
+    if (status === "SELECTED") return 0;
+    if (status === "MAYBE") return 1;
+    if (status === "NOT_SELECTED") return 3;
+    return 2; // unset / null
+  }
+
+  // Sort: selection status bucket first, then highest SOP score within bucket, then rollNumber
   const sorted = [...bids].sort((a, b) => {
+    const bucketDiff = statusPriority(a.sopSelectionStatus) - statusPriority(b.sopSelectionStatus);
+    if (bucketDiff !== 0) return bucketDiff;
     const scoreA = a.sopScore ?? 0;
     const scoreB = b.sopScore ?? 0;
     if (scoreB !== scoreA) return scoreB - scoreA;
@@ -294,6 +276,7 @@ export async function allocateCourse(
       cqpi: sp.cqpi,
       prerequisiteGrade: preqGrade,
       sopScore: (b as any).sopScore ?? null,
+      sopSelectionStatus: (b as any).sopSelectionStatus ?? null,
     };
   });
 
@@ -525,18 +508,7 @@ export async function validateBid(
     };
   }
 
-  // 5. Check points don't go below MRB (when reducing an existing bid)
-  const existingBid = await db.bid.findUnique({
-    where: {
-      userId_offeringId_roundId: { userId, offeringId, roundId },
-    },
-  });
-  if (existingBid && points < offering.mrb && points !== 0) {
-    return {
-      valid: false,
-      reason: `Bid cannot be below MRB of ${offering.mrb} points.`,
-    };
-  }
+  // 5. (MRB floor check removed — students may freely reduce their bids)
 
   // 6. Check available points in account
   const pointAccount = await db.pointAccount.findUnique({

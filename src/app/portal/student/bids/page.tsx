@@ -119,14 +119,13 @@ export default async function StudentBidsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Course</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Round</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Your Bid</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">MRB</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {activeBids.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm">
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-sm">
                       No active bids.{" "}
                       <Link href="/portal/student/catalog" className="text-indigo-600 hover:underline">
                         Browse courses
@@ -147,9 +146,6 @@ export default async function StudentBidsPage() {
                       <td className="px-4 py-3 text-right">
                         <span className="font-bold text-indigo-700">{bid.points}</span>
                         <span className="text-slate-400 text-xs"> pts</span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-slate-600">
-                        {bid.offering.mrb}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -174,18 +170,6 @@ export default async function StudentBidsPage() {
       </Card>
 
       {/* Bid rules reminder */}
-      <Card className="bg-slate-50 border-slate-200">
-        <CardContent className="p-5">
-          <h3 className="font-semibold text-slate-700 mb-2 text-sm">Bidding Rules</h3>
-          <ul className="space-y-1 text-xs text-slate-500">
-            <li>• You can reduce bid points down to the current MRB for a course.</li>
-            <li>• You can withdraw from a <strong>losing</strong> course at any time — points are reimbursed.</li>
-            <li>• You can withdraw from a <strong>winning</strong> course only if your bid is at 0 pts (MRB must be 0).</li>
-            <li>• Post-round confirmation: you may withdraw confirmed allocations during the confirmation round.</li>
-            <li>• All actions are logged in the audit trail.</li>
-          </ul>
-        </CardContent>
-      </Card>
     </div>
   );
 }

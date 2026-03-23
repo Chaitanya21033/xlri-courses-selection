@@ -189,14 +189,10 @@ export default async function ProfessorCoursesPage() {
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="grid grid-cols-1 gap-3 mb-3">
                     <div className="text-center p-2 bg-slate-50 rounded-lg">
                       <p className="text-xs text-slate-400">Seats</p>
                       <p className="font-bold text-slate-700">{o.seatCap}</p>
-                    </div>
-                    <div className="text-center p-2 bg-indigo-50 rounded-lg">
-                      <p className="text-xs text-indigo-400">MRB</p>
-                      <p className="font-bold text-indigo-700">{o.mrb}</p>
                     </div>
                   </div>
 
